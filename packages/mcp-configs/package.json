@@ -1,0 +1,17 @@
+{
+  "name": "mcp-configs",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "test:github": "tsx test-github-mcp.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}
