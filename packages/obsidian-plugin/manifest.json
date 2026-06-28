@@ -1,0 +1,10 @@
+{
+  "id": "sanctum-agent",
+  "name": "Sanctum Agent",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Dispara los agentes de Sanctum directamente desde Obsidian.",
+  "author": "Sanctum",
+  "authorUrl": "",
+  "isDesktopOnly": true
+}

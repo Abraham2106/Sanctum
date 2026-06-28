@@ -1,0 +1,23 @@
+{
+  "name": "sanctum-obsidian-plugin",
+  "version": "1.0.0",
+  "description": "Obsidian Plugin for Sanctum Agent",
+  "main": "main.js",
+  "scripts": {
+    "build": "esbuild main.ts --bundle --platform=node --target=es2020 --external:obsidian --outfile=main.js",
+    "dev": "esbuild main.ts --bundle --platform=node --target=es2018 --external:obsidian --outfile=main.js --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "agent-runtime": "file:../agent-runtime",
+    "gray-matter": "^4.0.3",
+    "obsidian": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "esbuild": "^0.17.0",
+    "typescript": "^4.9.0"
+  }
+}

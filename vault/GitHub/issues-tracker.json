@@ -1,0 +1,42 @@
+{
+  "$schema": "sanctum-issues-tracker/v1",
+  "tags": [
+    "agent-access"
+  ],
+  "repos": {
+    "Abraham2106/Sanctum": {
+      "issues": [
+        {
+          "github_number": 1,
+          "title": "Implementar autenticación JWT en el endpoint /login",
+          "status": "open",
+          "labels": [
+            "enhancement",
+            "security"
+          ],
+          "created_at": "2026-06-14",
+          "parent_issue": null,
+          "children": []
+        },
+        {
+          "github_number": 2,
+          "title": "Agregar rate limiting al endpoint /api/v1/search",
+          "status": "open",
+          "labels": [],
+          "created_at": "2026-06-14",
+          "parent_issue": null,
+          "children": []
+        },
+        {
+          "github_number": 3,
+          "title": "Documentar la API REST en OpenAPI 3.0",
+          "status": "open",
+          "labels": [],
+          "created_at": "2026-06-14",
+          "parent_issue": null,
+          "children": []
+        }
+      ]
+    }
+  }
+}
