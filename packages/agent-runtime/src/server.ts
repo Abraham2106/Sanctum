@@ -110,6 +110,30 @@ export function createAgentServer(options: AgentServerOptions): http.Server {
         return;
       }
 
+      if (method === "GET" && url === "/api/search") {
+        const urlObj = new URL(url, `http://${req.headers.host || "localhost"}`);
+        const query = urlObj.searchParams.get("q") || "";
+        const alpha = parseFloat(urlObj.searchParams.get("alpha") ?? "0.5");
+        const folder = urlObj.searchParams.get("folder") || undefined;
+        const limit = parseInt(urlObj.searchParams.get("limit") ?? "10", 10);
+
+        if (!query) {
+          jsonResponse(res, 400, { success: false, error: "Falta parámetro 'q'", logs: [] });
+          return;
+        }
+
+        try {
+          const { hybridSearch, isEmbeddingAvailable: checkEmbed } = await import("rag-engine");
+          const hasEmbed = checkEmbed();
+          const results = await hybridSearch(vaultPath, query, limit, folder, alpha);
+          jsonResponse(res, 200, { success: true, mode: hasEmbed ? "hybrid" : "fts5", alpha, results });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          jsonResponse(res, 200, { success: false, error: msg, results: [] });
+        }
+        return;
+      }
+
       if (method === "POST" && url === "/api/run") {
         const body = await readBody(req);
         const { agentPath, noContext, parameters } = body;
@@ -169,6 +193,21 @@ export function createAgentServer(options: AgentServerOptions): http.Server {
           jsonResponse(res, 200, { success: false, error: msg, logs: capture.logs });
         } finally {
           capture.restore();
+        }
+        return;
+      }
+
+      if (method === "POST" && url === "/api/index") {
+        const body = await readBody(req);
+        const folder = body?.folder as string | undefined;
+
+        try {
+          const { indexFolder } = await import("rag-engine");
+          const stats = await indexFolder(vaultPath, folder);
+          jsonResponse(res, 200, { success: true, stats });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          jsonResponse(res, 200, { success: false, error: msg });
         }
         return;
       }
