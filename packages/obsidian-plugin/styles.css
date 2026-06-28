@@ -1,0 +1,435 @@
+.sanctum-agent-list-container, .sanctum-settings-container {
+  padding: 16px;
+  font-family: var(--font-interface);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Header & Title Styling */
+.sanctum-header, .sanctum-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.sanctum-title, .sanctum-settings-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text-title-h1);
+  background: linear-gradient(135deg, var(--text-accent), var(--text-title-h2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sanctum-new-btn, .sanctum-save-btn, .sanctum-run-btn {
+  border-radius: 6px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.sanctum-new-btn:hover, .sanctum-save-btn:hover, .sanctum-run-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.sanctum-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Agent Card Styles */
+.sanctum-agent-card {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sanctum-agent-card:hover {
+  border-color: var(--text-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  background: var(--background-primary-alt);
+}
+
+.sanctum-agent-card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-normal);
+  margin-bottom: 4px;
+}
+
+.sanctum-agent-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.sanctum-agent-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sanctum-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.sanctum-badge-tool {
+  background: rgba(var(--mono-rgb-100), 0.08);
+  color: var(--text-accent);
+  border: 1px solid rgba(var(--mono-rgb-100), 0.15);
+}
+
+.sanctum-badge-model {
+  background: rgba(0, 128, 255, 0.1);
+  color: #0080ff;
+  border: 1px solid rgba(0, 128, 255, 0.2);
+}
+
+/* Empty/Error States */
+.sanctum-empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 20px 0;
+}
+
+.sanctum-error-box {
+  background: rgba(255, 0, 0, 0.08);
+  border: 1px solid rgba(255, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 12px;
+  color: #ff4d4d;
+  font-size: 0.9rem;
+}
+
+/* Settings Sections */
+.sanctum-section {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sanctum-section h4 {
+  margin: 0 0 6px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 6px;
+  color: var(--text-title-h3);
+}
+
+.sanctum-instructions-textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  background: var(--background-primary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 10px;
+  font-family: var(--font-monospace);
+  font-size: 0.85rem;
+}
+
+.sanctum-settings-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+.sanctum-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--background-primary-alt);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.sanctum-checkbox-label {
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.sanctum-save-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.sanctum-save-btn {
+  padding: 8px 20px;
+}
+
+.sanctum-row-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sanctum-run-btn {
+  flex: 1;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sanctum-run-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+}
+
+.sanctum-run-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+}
+
+.sanctum-context-toggle-row {
+  display: flex;
+  align-items: center;
+}
+
+.sanctum-context-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sanctum-context-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--text-accent);
+  cursor: pointer;
+}
+
+.sanctum-context-toggle-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Results panel */
+.sanctum-result-section {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sanctum-status-running {
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-accent);
+  padding: 12px;
+  background: rgba(var(--mono-rgb-100), 0.05);
+  border-radius: 6px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.sanctum-run-success {
+  color: var(--text-success);
+  font-weight: 600;
+  margin: 0;
+}
+
+.sanctum-run-failed {
+  color: #ff4d4d;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sanctum-result-box {
+  background: var(--background-primary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 0.85rem;
+}
+
+.sanctum-result-box h5 {
+  margin: 0 0 6px 0;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.sanctum-reasoning-list {
+  margin: 0 0 14px 0;
+  padding-left: 20px;
+}
+
+.sanctum-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sanctum-action-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--background-primary);
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.sanctum-action-type-badge {
+  font-family: var(--font-monospace);
+  font-size: 0.75rem;
+  background: rgba(var(--mono-rgb-100), 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-normal);
+}
+
+.sanctum-action-desc {
+  font-size: 0.85rem;
+}
+
+.sanctum-raw-output {
+  white-space: pre-wrap;
+  background: var(--background-primary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 10px;
+  font-family: var(--font-monospace);
+  font-size: 0.8rem;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* Sanctum Chat UI */
+.sanctum-chat-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.sanctum-chat-header {
+  padding: 10px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sanctum-agent-select {
+  max-width: 150px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-normal);
+  padding: 4px;
+}
+.sanctum-chat-history {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sanctum-message-wrapper {
+  display: flex;
+  width: 100%;
+}
+.sanctum-message-user {
+  justify-content: flex-end;
+}
+.sanctum-message-agent {
+  justify-content: flex-start;
+}
+.sanctum-message-system {
+  justify-content: center;
+}
+.sanctum-message-bubble {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  word-wrap: break-word;
+}
+.sanctum-message-user .sanctum-message-bubble {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.sanctum-message-agent .sanctum-message-bubble {
+  background-color: var(--background-secondary-alt);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+}
+.sanctum-message-system .sanctum-message-bubble {
+  background-color: transparent;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.85em;
+}
+.sanctum-chat-input-area {
+  padding: 10px;
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.sanctum-chat-input {
+  flex-grow: 1;
+  resize: none;
+  min-height: 40px;
+  max-height: 200px;
+  border-radius: 6px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  padding: 8px;
+  color: var(--text-normal);
+}
+.sanctum-chat-send-btn {
+  height: 40px;
+  white-space: nowrap;
+}
+
