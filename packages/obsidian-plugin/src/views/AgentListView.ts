@@ -1,4 +1,4 @@
-import { ItemView, Notice, WorkspaceLeaf } from 'obsidian';
+import { ItemView, Modal, Notice, Setting, WorkspaceLeaf } from 'obsidian';
 import type SanctumAgentsPlugin from '../../main';
 import { AgentConfig } from '../types';
 import { AgentConfigView, VIEW_TYPE_AGENT_CONFIG } from './AgentConfigView';
@@ -43,7 +43,6 @@ export class AgentListView extends ItemView {
       if (agent.schedule?.enabled) {
         nameRow.createEl('span', { text: ' ⏱', title: agent.schedule.intervalMinutes ? `Every ${agent.schedule.intervalMinutes}min` : `Daily at ${agent.schedule.dailyAt}` });
       }
-      card.createEl('div', { text: `${agent.tools.join(', ')} · ${agent.model}`, cls: 'sanctum-agent-meta' });
 
       const btns = card.createEl('div', { cls: 'sanctum-card-actions' });
 
@@ -81,25 +80,12 @@ export class AgentListView extends ItemView {
     await (leaf.view as unknown as AgentConfigView).loadAgent(agent.id);
   }
 
-  private async runAgent(agent: AgentConfig) {
-    new Notice(`Running: ${agent.name}...`);
-    try {
-      const result = await this.plugin.runner.run(agent);
-      new Notice(`Done (${result.tokens}t, ${result.actions.length} actions)`);
-    } catch (err) {
-      new Notice(`Failed: ${err}`);
-    }
+  private runAgent(agent: AgentConfig) {
+    new RunInputModal(this.app, agent, this.plugin).open();
   }
 
-  private async runChain(agent: AgentConfig) {
-    new Notice(`Running chain from: ${agent.name}...`);
-    try {
-      const steps = await this.plugin.workflow.runChain(agent);
-      const summary = steps.map(s => `${s.agent.name} (${s.result.tokens}t, ${s.result.actions.length}a)`).join(' → ');
-      new Notice(`Chain done: ${summary}`);
-    } catch (err) {
-      new Notice(`Chain failed: ${err}`);
-    }
+  private runChain(agent: AgentConfig) {
+    new ChainInputModal(this.app, agent, this.plugin).open();
   }
 
   private async deleteAgent(agent: AgentConfig) {
@@ -107,5 +93,86 @@ export class AgentListView extends ItemView {
     await this.plugin.scheduler.refresh();
     new Notice(`Deleted ${agent.name}`);
     this.render();
+  }
+}
+
+class RunInputModal extends Modal {
+  constructor(
+    app: any,
+    private agent: AgentConfig,
+    private plugin: SanctumAgentsPlugin,
+  ) {
+    super(app);
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl('h2', { text: `Run: ${this.agent.name}` });
+    contentEl.createEl('p', { text: 'Optional input for the agent:' });
+
+    const input = contentEl.createEl('input', { type: 'text', placeholder: 'e.g. Summarize findings', cls: 'sanctum-input wide' });
+    input.style.width = '100%';
+    input.style.marginBottom = '12px';
+    input.focus();
+    input.onkeydown = (e) => { if (e.key === 'Enter') this.start(input.value); };
+
+    new Setting(contentEl)
+      .addButton(btn => btn.setButtonText('Run').setCta().onClick(() => this.start(input.value)));
+  }
+
+  private async start(userInput: string) {
+    this.close();
+    new Notice(`Running: ${this.agent.name}...`);
+    try {
+      const result = await this.plugin.runner.run(this.agent, userInput || undefined);
+      new Notice(`Done (${result.tokens}t, ${result.actions.length} actions)`);
+    } catch (err) {
+      new Notice(`Failed: ${err}`);
+    }
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
+class ChainInputModal extends Modal {
+  constructor(
+    app: any,
+    private agent: AgentConfig,
+    private plugin: SanctumAgentsPlugin,
+  ) {
+    super(app);
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl('h2', { text: `Run Chain: ${this.agent.name}` });
+    contentEl.createEl('p', { text: 'Enter the topic or question for the pipeline:' });
+
+    const input = contentEl.createEl('input', { type: 'text', placeholder: 'e.g. Quantum Computing', cls: 'sanctum-input wide' });
+    input.style.width = '100%';
+    input.style.marginBottom = '12px';
+    input.focus();
+    input.onkeydown = (e) => { if (e.key === 'Enter') this.start(input.value); };
+
+    new Setting(contentEl)
+      .addButton(btn => btn.setButtonText('Start Chain').setCta().onClick(() => this.start(input.value)));
+  }
+
+  private async start(userInput: string) {
+    this.close();
+    new Notice(`Running chain from: ${this.agent.name}...`);
+    try {
+      const steps = await this.plugin.workflow.runChain(this.agent, userInput || undefined);
+      const summary = steps.map(s => `${s.agent.name} (${s.result.tokens}t, ${s.result.actions.length}a)`).join(' -> ');
+      new Notice(`Chain done: ${summary}`);
+    } catch (err) {
+      new Notice(`Chain failed: ${err}`);
+    }
+  }
+
+  onClose() {
+    this.contentEl.empty();
   }
 }

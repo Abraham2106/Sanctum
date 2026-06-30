@@ -51,8 +51,16 @@ export class LLMClient {
       return { reasoning: `El modelo devolvió un error: ${raw}`, actions: [], tokens: data.usage?.total_tokens ?? 0 };
     }
 
+    // Strip ```json...``` code block wrappers that LLMs often add
+    let cleaned = raw.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```[a-z]*\s*\n?/, '');
+      cleaned = cleaned.replace(/\n?```\s*$/, '');
+      cleaned = cleaned.trim();
+    }
+
     try {
-      const parsed = JSON.parse(raw);
+      const parsed = JSON.parse(cleaned);
       return {
         reasoning: parsed.reasoning ?? raw,
         actions: parsed.actions ?? [],

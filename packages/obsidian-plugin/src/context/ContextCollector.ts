@@ -32,6 +32,8 @@ export class ContextCollector {
 
   private matchesFolders(file: TFile, allowed: string[]): boolean {
     if (allowed.length === 0) return true;
+    // '.' means match everything (entire vault root)
+    if (allowed.includes('.')) return true;
     return allowed.some(f => file.path.startsWith(f + '/') || file.path === f + '.md');
   }
 
