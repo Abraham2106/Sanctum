@@ -48,6 +48,11 @@ export interface ModelResponse {
     step4_execute: string;
   };
   actions: AgentAction[];
+  usage?: {
+    totalTokens: number;
+    promptTokens?: number;
+    completionTokens?: number;
+  };
 }
 
 export interface TrackerIssue {
