@@ -1,435 +1,340 @@
-.sanctum-agent-list-container, .sanctum-settings-container {
-  padding: 16px;
-  font-family: var(--font-interface);
-  background: var(--background-secondary);
-  color: var(--text-normal);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* ── Sanctum Agents ── Notion-style AI agents for Obsidian ── */
+
+/* ───── Agent List ───── */
+
+.sanctum-agent-list {
   height: 100%;
   overflow-y: auto;
+  padding: 12px;
 }
 
-/* Header & Title Styling */
-.sanctum-header, .sanctum-settings-header {
+.sanctum-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--background-modifier-border);
-  padding-bottom: 12px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
 
-.sanctum-title, .sanctum-settings-title {
+.sanctum-header h3 {
   margin: 0;
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: var(--text-title-h1);
-  background: linear-gradient(135deg, var(--text-accent), var(--text-title-h2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.sanctum-new-btn, .sanctum-save-btn, .sanctum-run-btn {
-  border-radius: 6px;
+  font-size: 16px;
   font-weight: 600;
-  transition: all 0.2s ease;
-  cursor: pointer;
 }
 
-.sanctum-new-btn:hover, .sanctum-save-btn:hover, .sanctum-run-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.sanctum-empty {
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
-.sanctum-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Agent Card Styles */
 .sanctum-agent-card {
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
   border-radius: 8px;
-  padding: 14px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  padding: 12px;
+  margin-bottom: 10px;
+  transition: background 0.15s;
 }
 
 .sanctum-agent-card:hover {
-  border-color: var(--text-accent);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-  background: var(--background-primary-alt);
+  background: var(--background-secondary-alt);
 }
 
-.sanctum-agent-card-title {
+.sanctum-agent-name {
+  font-size: 14px;
   font-weight: 600;
-  font-size: 1rem;
-  color: var(--text-normal);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
-.sanctum-agent-card-desc {
-  font-size: 0.85rem;
+.sanctum-agent-meta {
+  font-size: 11px;
   color: var(--text-muted);
-  margin-bottom: 10px;
-  line-height: 1.35;
+  margin-bottom: 8px;
 }
 
-.sanctum-agent-badges {
+.sanctum-card-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
 }
 
-.sanctum-badge {
-  font-size: 0.72rem;
+/* ───── Agent Config Form ───── */
+
+.sanctum-agent-config {
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.sanctum-agent-config h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 12px;
+}
+
+.sanctum-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sanctum-section-title {
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-}
-
-.sanctum-badge-tool {
-  background: rgba(var(--mono-rgb-100), 0.08);
-  color: var(--text-accent);
-  border: 1px solid rgba(var(--mono-rgb-100), 0.15);
-}
-
-.sanctum-badge-model {
-  background: rgba(0, 128, 255, 0.1);
-  color: #0080ff;
-  border: 1px solid rgba(0, 128, 255, 0.2);
-}
-
-/* Empty/Error States */
-.sanctum-empty-state {
-  text-align: center;
+  letter-spacing: 0.5px;
   color: var(--text-muted);
-  font-style: italic;
-  margin: 20px 0;
-}
-
-.sanctum-error-box {
-  background: rgba(255, 0, 0, 0.08);
-  border: 1px solid rgba(255, 0, 0, 0.2);
-  border-radius: 6px;
-  padding: 12px;
-  color: #ff4d4d;
-  font-size: 0.9rem;
-}
-
-/* Settings Sections */
-.sanctum-section {
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.sanctum-section h4 {
-  margin: 0 0 6px 0;
-  font-size: 0.95rem;
-  font-weight: 600;
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--background-modifier-border);
-  padding-bottom: 6px;
-  color: var(--text-title-h3);
 }
 
-.sanctum-instructions-textarea {
-  width: 100%;
-  min-height: 140px;
-  resize: vertical;
-  background: var(--background-primary-alt);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  padding: 10px;
-  font-family: var(--font-monospace);
-  font-size: 0.85rem;
-}
-
-.sanctum-settings-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-top: 8px;
-  color: var(--text-muted);
-}
-
-.sanctum-checkbox-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--background-primary-alt);
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--background-modifier-border);
-}
-
-.sanctum-checkbox-label {
-  font-size: 0.85rem;
+.sanctum-field-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
+  margin-bottom: 6px;
 }
 
-.sanctum-save-section {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
+.sanctum-field-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 90px;
+  flex-shrink: 0;
 }
 
-.sanctum-save-btn {
-  padding: 8px 20px;
-}
-
-.sanctum-row-actions {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.sanctum-run-btn {
-  flex: 1;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #7c3aed, #4f46e5);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.sanctum-run-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
-}
-
-.sanctum-run-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
+.sanctum-input {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-normal);
+  flex: 1;
 }
 
-.sanctum-context-toggle-row {
-  display: flex;
-  align-items: center;
+.sanctum-input:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
 }
 
-.sanctum-context-toggle-label {
+.sanctum-input.narrow {
+  flex: 0 0 60px;
+}
+
+.sanctum-input.wide {
+  flex: 2;
+}
+
+.sanctum-input:disabled {
+  opacity: 0.5;
+}
+
+.sanctum-textarea {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-normal);
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: var(--font-text);
+}
+
+.sanctum-textarea:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+}
+
+.sanctum-select {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+  color: var(--text-normal);
+}
+
+.sanctum-vault-event {
+  padding: 8px 12px;
+  margin: 4px 0 8px 24px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+}
+
+/* ───── Toggle Switch ───── */
+
+.sanctum-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  padding: 4px 0;
   user-select: none;
 }
 
-.sanctum-context-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--text-accent);
-  cursor: pointer;
+.sanctum-toggle-input {
+  display: none;
 }
 
-.sanctum-context-toggle-text {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-weight: 500;
+.sanctum-toggle-slider {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background: var(--background-modifier-border);
+  border-radius: 9px;
+  transition: background 0.2s;
+  flex-shrink: 0;
 }
 
-/* Results panel */
-.sanctum-result-section {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.sanctum-toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--text-on-accent);
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
-.sanctum-status-running {
-  text-align: center;
-  font-weight: 600;
-  color: var(--text-accent);
-  padding: 12px;
-  background: rgba(var(--mono-rgb-100), 0.05);
-  border-radius: 6px;
-  animation: pulse 1.5s infinite ease-in-out;
+.sanctum-toggle-input:checked + .sanctum-toggle-slider {
+  background: var(--interactive-accent);
 }
 
-.sanctum-run-success {
-  color: var(--text-success);
-  font-weight: 600;
-  margin: 0;
+.sanctum-toggle-input:checked + .sanctum-toggle-slider::after {
+  transform: translateX(14px);
 }
 
-.sanctum-run-failed {
-  color: #ff4d4d;
-  font-weight: 600;
-  margin: 0;
-}
-
-.sanctum-result-box {
-  background: var(--background-primary-alt);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  padding: 12px;
-  font-size: 0.85rem;
-}
-
-.sanctum-result-box h5 {
-  margin: 0 0 6px 0;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.sanctum-reasoning-list {
-  margin: 0 0 14px 0;
-  padding-left: 20px;
-}
-
-.sanctum-actions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sanctum-action-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--background-primary);
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid var(--background-modifier-border);
-}
-
-.sanctum-action-type-badge {
-  font-family: var(--font-monospace);
-  font-size: 0.75rem;
-  background: rgba(var(--mono-rgb-100), 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+.sanctum-toggle-label {
+  font-size: 13px;
   color: var(--text-normal);
 }
 
-.sanctum-action-desc {
-  font-size: 0.85rem;
-}
+/* ───── Buttons ───── */
 
-.sanctum-raw-output {
-  white-space: pre-wrap;
-  background: var(--background-primary-alt);
+.sanctum-btn {
+  background: var(--background-secondary-alt);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  padding: 10px;
-  font-family: var(--font-monospace);
-  font-size: 0.8rem;
-  max-height: 250px;
-  overflow-y: auto;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+.sanctum-btn:hover {
+  background: var(--background-modifier-hover);
 }
 
-/* Sanctum Chat UI */
-.sanctum-chat-layout {
+.sanctum-btn-primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent-hover);
+}
+
+.sanctum-btn-primary:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.sanctum-btn-danger {
+  color: var(--text-error);
+  border-color: var(--text-error);
+}
+
+.sanctum-btn-danger:hover {
+  background: var(--text-error);
+  color: var(--text-on-accent);
+}
+
+.save-btn {
+  margin-top: 16px;
+  padding: 8px 16px;
+  font-size: 13px;
+  align-self: flex-start;
+}
+
+/* ───── Chat View ───── */
+
+.sanctum-chat-view {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
+  padding: 0;
 }
+
 .sanctum-chat-header {
-  padding: 10px;
-  border-bottom: 1px solid var(--background-modifier-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 8px 12px 4px;
 }
-.sanctum-agent-select {
-  max-width: 150px;
-  background-color: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  color: var(--text-normal);
-  padding: 4px;
-}
-.sanctum-chat-history {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.sanctum-message-wrapper {
-  display: flex;
+
+.sanctum-chat-agent-select {
   width: 100%;
-}
-.sanctum-message-user {
-  justify-content: flex-end;
-}
-.sanctum-message-agent {
-  justify-content: flex-start;
-}
-.sanctum-message-system {
-  justify-content: center;
-}
-.sanctum-message-bubble {
-  max-width: 80%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  word-wrap: break-word;
-}
-.sanctum-message-user .sanctum-message-bubble {
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
-.sanctum-message-agent .sanctum-message-bubble {
-  background-color: var(--background-secondary-alt);
-  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 6px;
+  border-radius: 4px;
   border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  cursor: pointer;
 }
-.sanctum-message-system .sanctum-message-bubble {
-  background-color: transparent;
+
+.sanctum-chat-status {
+  font-size: 10px;
   color: var(--text-muted);
-  font-style: italic;
-  font-size: 0.85em;
-}
-.sanctum-chat-input-area {
-  padding: 10px;
-  border-top: 1px solid var(--background-modifier-border);
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-}
-.sanctum-chat-input {
-  flex-grow: 1;
-  resize: none;
-  min-height: 40px;
-  max-height: 200px;
-  border-radius: 6px;
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  padding: 8px;
-  color: var(--text-normal);
-}
-.sanctum-chat-send-btn {
-  height: 40px;
+  padding: 0 12px 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.sanctum-chat-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sanctum-chat-bubble {
+  max-width: 90%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.sanctum-chat-bubble.user {
+  align-self: flex-end;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.sanctum-chat-bubble.assistant {
+  align-self: flex-start;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+}
+
+.sanctum-chat-text {
+  white-space: pre-wrap;
+}
+
+.sanctum-chat-input-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.sanctum-chat-input-bar input {
+  flex: 1;
+}
