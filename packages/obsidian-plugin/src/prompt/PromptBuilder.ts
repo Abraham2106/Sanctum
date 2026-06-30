@@ -17,6 +17,8 @@ Agent instructions:
 Context ({note_count} notes):
 {context}
 
+IMPORTANT: Create DEEP and DETAILED content. Each note must be at least 500-1000 words. Include multiple sections with headings, detailed analysis, concrete examples, references, and actionable insights. Do NOT create short or superficial content.
+
 Respond ONLY with a valid JSON object in this exact format:
 {
   "reasoning": "Your chain-of-thought reasoning here",
@@ -65,7 +67,7 @@ export class PromptBuilder {
 
     let instructions = agent.instructions;
     if (chainContext) {
-      instructions += `\n\n## Chain context\n${chainContext}\n\nReview and act upon the chain context above. If everything is fine, acknowledge and proceed. If improvements are needed, take corrective action.`;
+      instructions += `\n\n${chainContext}\n\nAfter reviewing the chain context, read the existing files in the Research folder to understand what has been created. Then proceed with your assigned task.`;
     }
 
     const system = SYSTEM_PROMPT
@@ -80,9 +82,11 @@ export class PromptBuilder {
     ];
 
     if (userInput) {
-      messages.push({ role: 'user', content: userInput });
+      messages.push({ role: 'user', content: `Research topic: ${userInput}\n\nExecute your assigned task based on the instructions above. Create deep, detailed, and comprehensive content.` });
     } else {
-      messages.push({ role: 'user', content: chainContext ? 'Review the chain context and take action.' : 'Run the agent according to its instructions.' });
+      messages.push({ role: 'user', content: chainContext
+        ? 'The chain context above shows the pipeline state. Read the existing files in the Research folder, then execute your task. Create deep, detailed, and comprehensive content.'
+        : 'Run the agent according to its instructions. Create detailed and comprehensive content.' });
     }
 
     return messages;
