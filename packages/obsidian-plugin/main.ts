@@ -182,7 +182,7 @@ export default class SanctumAgentsPlugin extends Plugin {
 
     this.addCommand({
       id: 'sanctum-create-content-pipeline',
-      name: 'Create Content Pipeline (Forager → Synthesizer → Reflector → Curator)',
+      name: 'Create Content Pipeline (Forager -> Synthesizer -> Reflector -> Curator)',
       callback: async () => {
         const agents: AgentConfig[] = [
           {
@@ -225,7 +225,7 @@ export default class SanctumAgentsPlugin extends Plugin {
         for (const a of agents) {
           await this.store.save(a);
         }
-        new Notice('Content pipeline created: Forager → Synthesizer → Reflector → Curator');
+        new Notice('Pipeline created: Forager -> Synthesizer -> Reflector -> Curator');
       },
     });
 
