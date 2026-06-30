@@ -1,4 +1,4 @@
-import { ItemView, Notice, WorkspaceLeaf } from 'obsidian';
+import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type SanctumAgentsPlugin from '../../main';
 import { ChatMessage } from '../types';
 import { ChatStorage } from '../chat/ChatStorage';
@@ -182,7 +182,7 @@ export class NoteChatView extends ItemView {
   }
 
   private sessionKey(): string {
-    return this.sessionKeyRaw(this.currentAgentId, this.currentNotePath || this.app.workspace.getActiveFile()?.path ?? '');
+    return this.sessionKeyRaw(this.currentAgentId, (this.currentNotePath || this.app.workspace.getActiveFile()?.path) ?? '');
   }
 
   private getSession() {
@@ -218,7 +218,6 @@ export class NoteChatView extends ItemView {
   }
 
   private async saveToDisk() {
-    if (!this.currentAgentId) return;
     const notePath = this.currentNotePath || this.app.workspace.getActiveFile()?.path ?? '';
     const session = this.sessions.get(this.sessionKey());
     if (session) {
