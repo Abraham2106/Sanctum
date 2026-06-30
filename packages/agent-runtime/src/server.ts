@@ -3,12 +3,6 @@ import * as path from "node:path";
 import { AgentRunner } from "./AgentRunner.js";
 import { AgentWorkflow } from "./workflow.js";
 
-// dotenv se carga externamente (plugin o CLI). Esta función es para standalone.
-try {
-  const { config } = require("dotenv");
-  config();
-} catch {} // Ignorar si dotenv no está disponible (bundled)
-
 function captureConsole(): { logs: string[]; restore: () => void } {
   const logs: string[] = [];
   const originalLog = console.log.bind(console);
@@ -81,7 +75,7 @@ export interface AgentServerOptions {
 }
 
 export function createAgentServer(options: AgentServerOptions): http.Server {
-  const vaultPath = path.resolve(options.vaultPath);
+  const vaultPath = path.resolve(options.vaultPath || process.cwd());
   const agentsDir = path.join(vaultPath, "Agents");
 
   const server = http.createServer(async (req, res) => {
