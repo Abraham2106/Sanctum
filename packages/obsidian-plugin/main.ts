@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Plugin, Setting } from 'obsidian';
+import { App, Modal, Notice, Plugin, Setting, TFile } from 'obsidian';
 import { AgentConfigStore } from './src/config/AgentConfigStore';
 import { AgentRunner } from './src/runtime/AgentRunner';
 import { SanctumSettingsTab } from './src/SanctumSettingsTab';
@@ -180,6 +180,8 @@ export default class SanctumAgentsPlugin extends Plugin {
         if (!agentsDir) await this.app.vault.createFolder('Agents');
         const logsDir = this.app.vault.getAbstractFileByPath('Agents/_logs');
         if (!logsDir) await this.app.vault.createFolder('Agents/_logs');
+        const chatsDir = this.app.vault.getAbstractFileByPath('Agents/_chats');
+        if (!chatsDir) await this.app.vault.createFolder('Agents/_chats');
         this.triggers.start();
       } catch (err) {
         console.error('[Sanctum] layoutReady error:', err);
@@ -195,6 +197,7 @@ export default class SanctumAgentsPlugin extends Plugin {
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_AGENT_LIST);
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_AGENT_CONFIG);
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_CHAT);
+    this.app.workspace.detachLeavesOfType(VIEW_TYPE_CHAT_HISTORY);
     await this.runner?.disconnectMCP();
   }
 
@@ -209,6 +212,20 @@ export default class SanctumAgentsPlugin extends Plugin {
     if (leaf) {
       await leaf.setViewState({ type: viewType, active: true });
       workspace.revealLeaf(leaf);
+    }
+  }
+
+  async loadChatSession(agentId: string, notePath: string) {
+    if (notePath) {
+      const file = this.app.vault.getAbstractFileByPath(notePath);
+      if (file instanceof TFile) {
+        await this.app.workspace.getLeaf(true).openFile(file);
+      }
+    }
+    await this.activateView(VIEW_TYPE_CHAT);
+    const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CHAT)[0];
+    if (leaf) {
+      await (leaf.view as any).loadChatFromFiles(agentId, notePath);
     }
   }
 
