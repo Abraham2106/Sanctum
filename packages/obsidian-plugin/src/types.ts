@@ -2,6 +2,12 @@ export type AgentTool = 'web' | 'github' | 'discord' | 'vault';
 
 export type VaultEventType = 'create' | 'modify' | 'both';
 
+export interface AgentSchedule {
+  enabled: boolean;
+  intervalMinutes?: number;
+  dailyAt?: string;
+}
+
 export interface AgentTriggers {
   run_manual: boolean;
   on_new_chat: boolean;
@@ -18,6 +24,7 @@ export interface AgentConfig {
   name: string;
   instructions: string;
   triggers: AgentTriggers;
+  schedule?: AgentSchedule;
   allowed_folders: string[];
   allowed_tags: string[];
   tools: AgentTool[];

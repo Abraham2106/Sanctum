@@ -7,6 +7,7 @@ import { AgentConfigView, VIEW_TYPE_AGENT_CONFIG } from './src/views/AgentConfig
 import { NoteChatView, VIEW_TYPE_CHAT } from './src/views/NoteChatView';
 import { ChatHistoryView, VIEW_TYPE_CHAT_HISTORY } from './src/views/ChatHistoryView';
 import { TriggerManager } from './src/triggers/TriggerManager';
+import { SchedulerManager } from './src/triggers/SchedulerManager';
 import { AgentConfig } from './src/types';
 import { ChatStorage } from './src/chat/ChatStorage';
 
@@ -32,6 +33,7 @@ export default class SanctumAgentsPlugin extends Plugin {
   store!: AgentConfigStore;
   runner!: AgentRunner;
   triggers!: TriggerManager;
+  scheduler!: SchedulerManager;
   chatStorage!: ChatStorage;
   settings!: SanctumPluginSettings;
 
@@ -53,6 +55,7 @@ export default class SanctumAgentsPlugin extends Plugin {
     this.registerView(VIEW_TYPE_CHAT_HISTORY, (leaf) => new ChatHistoryView(leaf, this));
 
     this.triggers = new TriggerManager(this);
+    this.scheduler = new SchedulerManager(this);
     this.chatStorage = new ChatStorage(this.app);
 
     this.addSettingTab(new SanctumSettingsTab(this.app, this));
@@ -181,6 +184,7 @@ export default class SanctumAgentsPlugin extends Plugin {
         const logsDir = this.app.vault.getAbstractFileByPath('Agents/_logs');
         if (!logsDir) await this.app.vault.createFolder('Agents/_logs');
         this.triggers.start();
+        this.scheduler.start();
       } catch (err) {
         console.error('[Sanctum] layoutReady error:', err);
       }
@@ -192,6 +196,7 @@ export default class SanctumAgentsPlugin extends Plugin {
 
   async onunload() {
     this.triggers?.stop();
+    this.scheduler?.stop();
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_AGENT_LIST);
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_AGENT_CONFIG);
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_CHAT);

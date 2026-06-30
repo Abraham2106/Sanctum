@@ -108,6 +108,15 @@ export class AgentConfigStore {
     const onMentioned = t?.on_mentioned ?? data.on_mentioned ?? false;
     const vaultEventData = t?.on_vault_event ?? data.on_vault_event ?? undefined;
 
+    const sched = data.schedule as Record<string, unknown> | undefined;
+    const schedule = sched
+      ? {
+          enabled: sched.enabled === true,
+          intervalMinutes: typeof sched.intervalMinutes === 'number' && sched.intervalMinutes > 0 ? sched.intervalMinutes : undefined,
+          dailyAt: typeof sched.dailyAt === 'string' ? sched.dailyAt : undefined,
+        }
+      : undefined;
+
     return {
       id: (typeof data.id === 'string' && data.id) ? data.id : basename,
       name: String(data.name).trim(),
@@ -126,6 +135,7 @@ export class AgentConfigStore {
             }
           : undefined,
       },
+      schedule,
       allowed_folders: toStrArray(data.allowed_folders),
       allowed_tags: toStrArray(data.allowed_tags),
       tools: toolsRaw,

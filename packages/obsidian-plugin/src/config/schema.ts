@@ -11,6 +11,12 @@ const DEFAULT_TRIGGERS = {
   on_mentioned: false,
 } as const;
 
+export const agentScheduleSchema = z.object({
+  enabled: z.boolean().default(false),
+  intervalMinutes: z.number().int().min(1).optional(),
+  dailyAt: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+}).optional();
+
 export const agentTriggersSchema = z.object({
   run_manual: z.boolean().default(DEFAULT_TRIGGERS.run_manual),
   on_new_chat: z.boolean().default(DEFAULT_TRIGGERS.on_new_chat),
@@ -27,6 +33,7 @@ export const agentConfigSchema = z.object({
   name: z.string().min(1),
   instructions: z.string().default(''),
   triggers: agentTriggersSchema.default(DEFAULT_TRIGGERS),
+  schedule: agentScheduleSchema,
   allowed_folders: z.array(z.string()).default([]),
   allowed_tags: z.array(z.string()).default([]),
   tools: z.array(agentToolSchema).default([]),
@@ -45,6 +52,7 @@ export function parseAgentConfig(data: Record<string, unknown>, fallbackId: stri
     name: result.data.name,
     instructions: result.data.instructions,
     triggers: result.data.triggers,
+    schedule: result.data.schedule,
     allowed_folders: result.data.allowed_folders,
     allowed_tags: result.data.allowed_tags,
     tools: result.data.tools,

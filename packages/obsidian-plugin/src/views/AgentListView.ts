@@ -38,7 +38,11 @@ export class AgentListView extends ItemView {
 
     for (const agent of agents) {
       const card = containerEl.createEl('div', { cls: 'sanctum-agent-card' });
-      card.createEl('div', { text: agent.name, cls: 'sanctum-agent-name' });
+      const nameRow = card.createEl('div', { cls: 'sanctum-agent-name' });
+      nameRow.textContent = agent.name;
+      if (agent.schedule?.enabled) {
+        nameRow.createEl('span', { text: ' ⏱', title: agent.schedule.intervalMinutes ? `Every ${agent.schedule.intervalMinutes}min` : `Daily at ${agent.schedule.dailyAt}` });
+      }
       card.createEl('div', { text: `${agent.tools.join(', ')} · ${agent.model}`, cls: 'sanctum-agent-meta' });
 
       const btns = card.createEl('div', { cls: 'sanctum-card-actions' });
@@ -82,6 +86,7 @@ export class AgentListView extends ItemView {
 
   private async deleteAgent(agent: AgentConfig) {
     await this.plugin.store.delete(agent.id);
+    await this.plugin.scheduler.refresh();
     new Notice(`Deleted ${agent.name}`);
     this.render();
   }

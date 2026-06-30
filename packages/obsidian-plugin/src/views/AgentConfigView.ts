@@ -1,6 +1,6 @@
 import { ItemView, Notice, WorkspaceLeaf } from 'obsidian';
 import type SanctumAgentsPlugin from '../../main';
-import { AgentConfig, AgentTool, VaultEventType } from '../types';
+import { AgentConfig, AgentSchedule, AgentTool, VaultEventType } from '../types';
 
 export const VIEW_TYPE_AGENT_CONFIG = 'sanctum-agent-config';
 
@@ -42,6 +42,7 @@ export class AgentConfigView extends ItemView {
     const defaults: AgentConfig = {
       id: '', name: '', instructions: '',
       triggers: { run_manual: true, on_new_chat: false, on_mentioned: false },
+      schedule: { enabled: false },
       allowed_folders: [], allowed_tags: [], tools: ['vault'],
       model: 'auto', max_actions: 3,
     };
@@ -96,6 +97,47 @@ export class AgentConfigView extends ItemView {
       opt.selected = e === (config.triggers.on_vault_event?.event ?? 'both');
     });
 
+    this.addSection(form, 'Schedule');
+    const schedOn = this.addToggle(form, 'Scheduled', config.schedule?.enabled ?? false);
+
+    const scheduleDetails = form.createEl('div', { cls: 'sanctum-vault-event' });
+    scheduleDetails.style.display = config.schedule?.enabled ? '' : 'none';
+    schedOn.onchange = () => { scheduleDetails.style.display = schedOn.checked ? '' : 'none'; };
+
+    // Mode selector: every N minutes or daily at fixed time
+    const schedModeRow = scheduleDetails.createEl('div', { cls: 'sanctum-field-row' });
+    schedModeRow.createEl('label', { text: 'Mode:', cls: 'sanctum-field-label' });
+    const schedMode = schedModeRow.createEl('select', { cls: 'sanctum-select' });
+    const isInterval = config.schedule?.intervalMinutes !== undefined;
+    ['interval', 'daily'].forEach(m => {
+      const opt = schedMode.createEl('option', { value: m, text: m === 'interval' ? 'Every N minutes' : 'Daily at time' });
+      opt.selected = m === (isInterval ? 'interval' : 'daily');
+    });
+
+    const schedIntervalRow = scheduleDetails.createEl('div', { cls: 'sanctum-field-row' });
+    schedIntervalRow.createEl('label', { text: 'Every:', cls: 'sanctum-field-label' });
+    const schedIntervalInput = schedIntervalRow.createEl('input', {
+      type: 'number', value: String(config.schedule?.intervalMinutes ?? 60),
+      cls: 'sanctum-input narrow',
+    });
+    schedIntervalInput.setAttribute('min', '1');
+    schedIntervalRow.createEl('span', { text: 'min', cls: 'sanctum-field-label' });
+
+    const schedDailyRow = scheduleDetails.createEl('div', { cls: 'sanctum-field-row' });
+    schedDailyRow.createEl('label', { text: 'At:', cls: 'sanctum-field-label' });
+    const schedDailyInput = schedDailyRow.createEl('input', {
+      type: 'text', value: config.schedule?.dailyAt ?? '09:00', placeholder: '09:00',
+      cls: 'sanctum-input narrow',
+    });
+
+    // Show/hide rows based on mode
+    schedIntervalRow.style.display = schedMode.value === 'interval' ? '' : 'none';
+    schedDailyRow.style.display = schedMode.value === 'daily' ? '' : 'none';
+    schedMode.onchange = () => {
+      schedIntervalRow.style.display = schedMode.value === 'interval' ? '' : 'none';
+      schedDailyRow.style.display = schedMode.value === 'daily' ? '' : 'none';
+    };
+
     this.addSection(form, 'Tools & Access');
     const toolTypes: AgentTool[] = ['vault', 'github', 'web', 'discord'];
     const toolToggles: Record<AgentTool, HTMLInputElement> = {} as Record<AgentTool, HTMLInputElement>;
@@ -124,7 +166,9 @@ export class AgentConfigView extends ItemView {
     const saveBtn = form.createEl('button', { text: 'Save Agent', cls: 'sanctum-btn sanctum-btn-primary save-btn' });
     saveBtn.onclick = () => this.save(
       idInput, nameInput, instrText, runMan, newChat, mentioned, vaultEv,
-      veFolders, veTags, veEvent, toolToggles, afInput, atInput, modelInput, maxInput,
+      veFolders, veTags, veEvent,
+      schedOn, schedMode, schedIntervalInput, schedDailyInput,
+      toolToggles, afInput, atInput, modelInput, maxInput,
     );
   }
 
@@ -133,6 +177,8 @@ export class AgentConfigView extends ItemView {
     instrText: HTMLTextAreaElement, runMan: HTMLInputElement, newChat: HTMLInputElement,
     mentioned: HTMLInputElement, vaultEv: HTMLInputElement, veFolders: HTMLInputElement,
     veTags: HTMLInputElement, veEvent: HTMLSelectElement,
+    schedOn: HTMLInputElement, schedMode: HTMLSelectElement,
+    schedIntervalInput: HTMLInputElement, schedDailyInput: HTMLInputElement,
     toolToggles: Record<AgentTool, HTMLInputElement>, afInput: HTMLInputElement,
     atInput: HTMLInputElement, modelInput: HTMLInputElement, maxInput: HTMLInputElement,
   ) {
@@ -140,6 +186,14 @@ export class AgentConfigView extends ItemView {
     if (!id) { new Notice('Agent ID is required'); return; }
 
     const split = (v: string) => v.split(',').map(s => s.trim()).filter(Boolean);
+
+    const schedule: AgentSchedule | undefined = schedOn.checked
+      ? {
+          enabled: true,
+          intervalMinutes: schedMode.value === 'interval' ? (parseInt(schedIntervalInput.value, 10) || 60) : undefined,
+          dailyAt: schedMode.value === 'daily' ? (schedDailyInput.value.trim() || '09:00') : undefined,
+        }
+      : { enabled: false };
 
     const config: AgentConfig = {
       id,
@@ -151,6 +205,7 @@ export class AgentConfigView extends ItemView {
         on_mentioned: mentioned.checked,
         on_vault_event: vaultEv.checked ? { folders: split(veFolders.value), tags: split(veTags.value), event: veEvent.value as VaultEventType } : undefined,
       },
+      schedule,
       allowed_folders: split(afInput.value),
       allowed_tags: split(atInput.value),
       tools: (Object.entries(toolToggles) as [AgentTool, HTMLInputElement][]).filter(([, cb]) => cb.checked).map(([t]) => t),
@@ -159,6 +214,7 @@ export class AgentConfigView extends ItemView {
     };
 
     await this.plugin.store.save(config);
+    await this.plugin.scheduler.refresh();
     new Notice(`Agent "${config.name}" saved`);
     this.editingId = id;
   }
