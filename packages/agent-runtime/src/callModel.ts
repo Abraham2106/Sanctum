@@ -49,6 +49,11 @@ export async function callModel(
         content: string;
       };
     }>;
+    usage?: {
+      total_tokens?: number;
+      prompt_tokens?: number;
+      completion_tokens?: number;
+    };
   };
 
   const rawContent = responseData.choices?.[0]?.message?.content;
@@ -68,6 +73,18 @@ export async function callModel(
 
   try {
     const parsed = JSON.parse(cleanedContent) as ModelResponse;
+
+    // Attach usage from proxy response if available
+    if (responseData.usage) {
+      const u: ModelResponse["usage"] = { totalTokens: responseData.usage.total_tokens ?? 0 };
+      if (responseData.usage.prompt_tokens !== undefined) {
+        u.promptTokens = responseData.usage.prompt_tokens;
+      }
+      if (responseData.usage.completion_tokens !== undefined) {
+        u.completionTokens = responseData.usage.completion_tokens;
+      }
+      parsed.usage = u;
+    }
 
     // Validación básica de estructura
     if (!parsed.reasoning || typeof parsed.reasoning !== "object") {

@@ -57,6 +57,10 @@ async function main() {
   const agentIndex = args.indexOf("--agent");
   const workflowIndex = args.indexOf("--workflow");
   const noContext  = args.includes("--no-context");
+  const dryRun  = args.includes("--dry-run");
+  const schedulerFlag = args.includes("--scheduler");
+  const watchFlag = args.includes("--watch");
+  const mentionFlag = args.includes("--mention");
 
   const rootDir = findMonorepoRoot(process.cwd());
   const vaultPath = process.env.VAULT_PATH
@@ -74,11 +78,49 @@ async function main() {
     return;
   }
 
+  if (schedulerFlag) {
+    const { Scheduler } = await import("./Scheduler.js");
+    const scheduler = new Scheduler(vaultPath);
+    await scheduler.loadJobs();
+    scheduler.start();
+    console.log("[CLI] Scheduler mode — running scheduled jobs");
+    return;
+  }
+
+  if (mentionFlag) {
+    const { MentionWatcher } = await import("./MentionWatcher.js");
+    const { loadAgentConfig } = await import("./loadAgentConfig.js");
+    const watcher = new MentionWatcher(vaultPath, async (event) => {
+      console.log(`[MentionWatcher] Triggered: @${event.agentId} in ${event.filePath}`);
+    });
+    // Load known agent IDs
+    const fs = await import("fs/promises");
+    const agentsDir = path.join(vaultPath, "Agents");
+    try {
+      const entries = await fs.readdir(agentsDir);
+      const agentIds: string[] = [];
+      for (const entry of entries) {
+        if (!entry.endsWith(".md") || entry.startsWith("_")) continue;
+        try {
+          const config = await loadAgentConfig(path.join(agentsDir, entry));
+          agentIds.push(config.name.toLowerCase().replace(/\s+/g, "-"));
+        } catch { continue; }
+      }
+      watcher.setAgents(agentIds);
+    } catch { /* ignore */ }
+    watcher.start();
+    console.log("[CLI] Mention watcher mode — watching for @agent mentions");
+    return;
+  }
+
   if (agentIndex === -1 && workflowIndex === -1) {
-    console.error("ERROR: Debes proporcionar la ruta a la nota del agente, invocar un workflow, o usar --server. Ejemplo:");
-    console.error("  npx tsx src/index.ts --agent ../../vault/Agents/github-manager.md");
-    console.error("  npx tsx src/index.ts --workflow \"Crea un proyecto X\"");
-    console.error("  npx tsx src/index.ts --server");
+    console.error("ERROR: Modo de uso:");
+    console.error("  npx tsx src/index.ts --agent <path>          Ejecutar un agente");
+    console.error("  npx tsx src/index.ts --agent <path> --dry-run Vista previa sin ejecutar");
+    console.error("  npx tsx src/index.ts --workflow \"prompt\"    Workflow multi-agente");
+    console.error("  npx tsx src/index.ts --server                 Servidor HTTP");
+    console.error("  npx tsx src/index.ts --scheduler              Jobs programados");
+    console.error("  npx tsx src/index.ts --mention                Vigilar @menciones");
     process.exit(1);
   }
 
@@ -116,6 +158,7 @@ async function main() {
   console.log(`Agente: ${agentPath}`);
   console.log(`Vault:  ${vaultPath}`);
   console.log(`Contexto: ${noContext ? "DESACTIVADO (--no-context)" : "ACTIVADO"}`);
+  if (dryRun) console.log("DRY RUN: Las acciones NO se ejecutarán");
   if (Object.keys(parameters).length > 0) {
     console.log(`Parámetros dinámicos:`, JSON.stringify(parameters));
   }
@@ -135,6 +178,7 @@ async function main() {
         agentPath,
         vaultPath,
         noContext,
+        dryRun,
         parameters
       });
     }

@@ -180,8 +180,6 @@ export default class SanctumAgentsPlugin extends Plugin {
         if (!agentsDir) await this.app.vault.createFolder('Agents');
         const logsDir = this.app.vault.getAbstractFileByPath('Agents/_logs');
         if (!logsDir) await this.app.vault.createFolder('Agents/_logs');
-        const chatsDir = this.app.vault.getAbstractFileByPath('Agents/_chats');
-        if (!chatsDir) await this.app.vault.createFolder('Agents/_chats');
         this.triggers.start();
       } catch (err) {
         console.error('[Sanctum] layoutReady error:', err);
@@ -215,7 +213,7 @@ export default class SanctumAgentsPlugin extends Plugin {
     }
   }
 
-  async loadChatSession(agentId: string, notePath: string) {
+  async loadChatSession(agentId: string, notePath: string, sessionId: string) {
     if (notePath) {
       const file = this.app.vault.getAbstractFileByPath(notePath);
       if (file instanceof TFile) {
@@ -225,7 +223,7 @@ export default class SanctumAgentsPlugin extends Plugin {
     await this.activateView(VIEW_TYPE_CHAT);
     const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CHAT)[0];
     if (leaf) {
-      await (leaf.view as any).loadChatFromFiles(agentId, notePath);
+      await (leaf.view as any).loadChatSession(agentId, notePath, sessionId);
     }
   }
 

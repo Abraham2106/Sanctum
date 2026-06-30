@@ -21,66 +21,80 @@ export class ChatHistoryView extends ItemView {
   async render() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.style.cssText = 'padding:8px;font-family:sans-serif;';
+    containerEl.addClass('sanctum-chat-history');
 
     containerEl.createEl('h3', { text: 'Chat History' });
-    containerEl.createEl('div', { text: 'Conversaciones guardadas automáticamente.' });
+    containerEl.createEl('p', { text: 'Todas las sesiones de chat guardadas.' });
 
     const chats = await this.plugin.chatStorage.list();
     if (chats.length === 0) {
-      containerEl.createEl('p', { text: 'No hay chats guardados aún.' });
+      containerEl.createEl('p', { text: 'No hay sesiones guardadas aún.' });
       return;
     }
 
-    for (const chat of chats) {
-      const card = containerEl.createEl('div');
-      card.style.cssText = 'background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:8px;margin:6px 0;font-size:13px;';
+    // Agrupar por agente
+    const grouped = new Map<string, ChatSummary[]>();
+    for (const c of chats) {
+      const g = grouped.get(c.agentId) || [];
+      g.push(c);
+      grouped.set(c.agentId, g);
+    }
 
-      const nameEl = card.createEl('div');
-      nameEl.style.cssText = 'font-weight:600;';
-      nameEl.textContent = chat.agentId;
+    for (const [agentId, sessions] of grouped) {
+      const groupEl = containerEl.createEl('div');
+      groupEl.addClass('sanctum-history-group');
 
-      if (chat.notePath) {
-        const pathEl = card.createEl('div');
-        pathEl.style.cssText = 'font-size:11px;color:#666;';
-        pathEl.textContent = chat.notePath;
+      const groupTitle = groupEl.createEl('div', { text: agentId });
+      groupTitle.addClass('sanctum-history-group-title');
+
+      for (const s of sessions) {
+        const card = containerEl.createEl('div');
+        card.addClass('sanctum-history-card');
+
+        if (s.notePath) {
+          const pathEl = card.createEl('div');
+          pathEl.addClass('sanctum-history-path');
+          pathEl.textContent = s.notePath;
+        }
+
+        const meta = card.createEl('div');
+        meta.addClass('sanctum-history-meta');
+        meta.textContent = `${s.messageCount} msgs · ${this.fmtDate(s.updatedAt)} · ${this.fmtDateShort(s.createdAt)}`;
+
+        const btnRow = card.createEl('div');
+        btnRow.addClass('sanctum-history-actions');
+
+        const loadBtn = btnRow.createEl('button', { text: 'Load' });
+        loadBtn.addClass('sanctum-btn', 'sanctum-btn-primary');
+        loadBtn.onclick = () => this.loadChat(s);
+
+        const delBtn = btnRow.createEl('button', { text: 'Delete' });
+        delBtn.addClass('sanctum-btn', 'sanctum-btn-danger');
+        delBtn.onclick = async () => {
+          await this.plugin.chatStorage.delete(s.agentId, s.notePath, s.sessionId);
+          await this.render();
+        };
       }
-
-      const metaEl = card.createEl('div');
-      metaEl.style.cssText = 'font-size:11px;color:#999;margin:2px 0 6px;';
-      metaEl.textContent = `${chat.messageCount} mensajes · ${this.formatDate(chat.updatedAt)}`;
-
-      const btnRow = card.createEl('div');
-      btnRow.style.cssText = 'display:flex;gap:4px;';
-
-      const loadBtn = btnRow.createEl('button', { text: 'Load' });
-      loadBtn.style.cssText = 'padding:3px 8px;font-size:11px;background:#0066cc;color:#fff;border:none;border-radius:3px;cursor:pointer;';
-      loadBtn.onclick = () => this.loadChat(chat);
-
-      const delBtn = btnRow.createEl('button', { text: 'Delete' });
-      delBtn.style.cssText = 'padding:3px 8px;font-size:11px;background:#ccc;color:#000;border:none;border-radius:3px;cursor:pointer;';
-      delBtn.onclick = async () => {
-        await this.plugin.chatStorage.delete(chat.agentId, chat.notePath);
-        await this.render();
-      };
     }
   }
 
   private async loadChat(chat: ChatSummary) {
-    await this.plugin.loadChatSession(chat.agentId, chat.notePath);
+    await this.plugin.loadChatSession(chat.agentId, chat.notePath, chat.sessionId);
   }
 
-  private formatDate(iso: string): string {
+  private fmtDate(iso: string): string {
     if (!iso) return '';
     const d = new Date(iso);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const min = Math.floor(diffMs / 60000);
+    const min = Math.floor((Date.now() - d.getTime()) / 60000);
     if (min < 1) return 'ahora';
-    if (min < 60) return `hace ${min} min`;
-    const hrs = Math.floor(min / 60);
-    if (hrs < 24) return `hace ${hrs}h`;
-    const days = Math.floor(hrs / 24);
-    return `hace ${days}d`;
+    if (min < 60) return `hace ${min}m`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `hace ${h}h`;
+    return `hace ${Math.floor(h / 24)}d`;
+  }
+
+  private fmtDateShort(iso: string): string {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString();
   }
 }

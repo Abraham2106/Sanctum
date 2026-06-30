@@ -130,7 +130,7 @@ export function createAgentServer(options: AgentServerOptions): http.Server {
 
       if (method === "POST" && url === "/api/run") {
         const body = await readBody(req);
-        const { agentPath, noContext, parameters } = body;
+        const { agentPath, noContext, dryRun, parameters } = body;
 
         if (!agentPath) {
           jsonResponse(res, 400, { success: false, error: "Falta 'agentPath'", logs: [] });
@@ -156,6 +156,7 @@ export function createAgentServer(options: AgentServerOptions): http.Server {
             agentPath: resolvedPath,
             vaultPath,
             noContext: !!noContext,
+            dryRun: !!dryRun,
             parameters: parameters ?? {},
           });
           jsonResponse(res, 200, { success: true, actions, logs: capture.logs });
@@ -203,6 +204,37 @@ export function createAgentServer(options: AgentServerOptions): http.Server {
           const msg = e instanceof Error ? e.message : String(e);
           jsonResponse(res, 200, { success: false, error: msg });
         }
+        return;
+      }
+
+      if (method === "GET" && url === "/api/health") {
+        const checks = {
+          vault: await (async () => {
+            try {
+              const fs = await import("node:fs/promises");
+              await fs.access(vaultPath);
+              return { ok: true };
+            } catch {
+              return { ok: false, error: "Vault not accessible" };
+            }
+          })(),
+          proxy: process.env.GEMINI_PROXY_URL
+            ? { ok: true, url: process.env.GEMINI_PROXY_URL }
+            : { ok: false, error: "GEMINI_PROXY_URL not set" },
+          discord: process.env.DISCORD_TOKEN
+            ? { ok: true }
+            : { ok: false, error: "DISCORD_TOKEN not set" },
+          github: process.env.GITHUB_TOKEN
+            ? { ok: true }
+            : { ok: false, error: "GITHUB_TOKEN not set" },
+        };
+        const allOk = Object.values(checks).every((c: any) => c.ok);
+        jsonResponse(res, allOk ? 200 : 200, {
+          success: true,
+          status: allOk ? "healthy" : "degraded",
+          checks,
+          timestamp: new Date().toISOString(),
+        });
         return;
       }
 

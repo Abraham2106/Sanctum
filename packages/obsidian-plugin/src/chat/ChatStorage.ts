@@ -1,10 +1,11 @@
-import { App, TFile } from 'obsidian';
+import { App } from 'obsidian';
 import { ChatMessage } from '../types';
 
-const CHATS_DIR = 'Agents/_chats';
+const CHATS_FILE = '.sanctum_chats.json';
 
 export interface ChatSummary {
   id: string;
+  sessionId: string;
   agentId: string;
   notePath: string;
   messageCount: number;
@@ -12,139 +13,130 @@ export interface ChatSummary {
   updatedAt: string;
 }
 
-function chatFileName(agentId: string, notePath: string): string {
-  const slug = (notePath || 'global')
-    .replace(/\.md$/i, '')
-    .replace(/[^a-zA-Z0-9-\u00C0-\u024F]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `${agentId}__${slug}.md`;
+interface StoredChat {
+  sessionId: string;
+  agentId: string;
+  notePath: string;
+  history: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-function chatFilePath(agentId: string, notePath: string): string {
-  return `${CHATS_DIR}/${chatFileName(agentId, notePath)}`;
+interface StoreData {
+  chats: StoredChat[];
 }
 
 export class ChatStorage {
   constructor(private app: App) {}
 
-  async save(agentId: string, notePath: string, history: ChatMessage[]): Promise<void> {
-    const path = chatFilePath(agentId, notePath);
-    const frontmatter = [
-      `agent_id: "${agentId}"`,
-      `note_path: "${notePath || ''}"`,
-      `created_at: "${history.length > 0 ? this.readCreatedAt(path) : new Date().toISOString()}"`,
-      `updated_at: "${new Date().toISOString()}"`,
-      `message_count: ${history.length}`,
-    ].join('\n');
-
-    const body = history.map(msg =>
-      `## ${msg.role === 'user' ? 'User' : msg.role === 'assistant' ? 'Assistant' : 'System'}\n${msg.content}`
-    ).join('\n\n');
-
-    const content = `---\n${frontmatter}\n---\n\n${body}\n`;
-    await this.ensureDir();
-    const existing = this.app.vault.getAbstractFileByPath(path);
-    if (existing instanceof TFile) {
-      await this.app.vault.modify(existing, content);
-    } else {
-      await this.app.vault.create(path, content);
-    }
-  }
-
-  async load(agentId: string, notePath: string): Promise<ChatMessage[]> {
-    const path = chatFilePath(agentId, notePath);
-    const file = this.app.vault.getAbstractFileByPath(path);
-    if (!(file instanceof TFile)) return [];
-    const text = await this.app.vault.read(file);
-    return this.parseBody(text);
-  }
-
-  async list(): Promise<ChatSummary[]> {
-    await this.ensureDir();
-    const files = this.app.vault.getMarkdownFiles()
-      .filter(f => f.path.startsWith(CHATS_DIR + '/'));
-
-    const result: ChatSummary[] = [];
-    for (const f of files) {
-      const text = await this.app.vault.read(f);
-      const meta = this.parseMeta(text);
-      result.push({
-        id: f.basename,
-        agentId: meta.agentId || f.basename.split('__')[0] || 'unknown',
-        notePath: meta.notePath || '',
-        messageCount: meta.messageCount || this.countMessages(text),
-        createdAt: meta.createdAt || '',
-        updatedAt: meta.updatedAt || new Date(f.stat.mtime).toISOString(),
-      });
-    }
-    result.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-    return result;
-  }
-
-  async delete(agentId: string, notePath: string): Promise<void> {
-    const path = chatFilePath(agentId, notePath);
-    const file = this.app.vault.getAbstractFileByPath(path);
-    if (file instanceof TFile) {
-      await this.app.vault.delete(file);
-    }
-  }
-
-  private async ensureDir() {
-    const dir = this.app.vault.getAbstractFileByPath(CHATS_DIR);
-    if (!dir) {
-      await this.app.vault.createFolder(CHATS_DIR);
-    }
-  }
-
-  private readCreatedAt(path: string): string {
-    const file = this.app.vault.getAbstractFileByPath(path);
-    if (file instanceof TFile) {
-      try {
-        const text = this.app.vault.read(file);
-        // Can't await here, this is sync. Use a different approach.
-        // Just return current time for simplicity.
-      } catch { /* ignore */ }
-    }
-    return new Date().toISOString();
-  }
-
-  private parseMeta(text: string): { agentId: string; notePath: string; messageCount: number; createdAt: string; updatedAt: string } {
-    const def = { agentId: '', notePath: '', messageCount: 0, createdAt: '', updatedAt: '' };
-    const match = text.match(/^---\n([\s\S]*?)\n---/);
-    if (!match) return def;
-    const m: Record<string, string> = {};
-    for (const line of match[1].split('\n')) {
-      const sep = line.indexOf(': ');
-      if (sep > 0) {
-        m[line.slice(0, sep).trim()] = line.slice(sep + 2).trim().replace(/^"|"$/g, '');
+  /** Guarda o actualiza una sesión */
+  async save(agentId: string, notePath: string, sessionId: string, history: ChatMessage[]): Promise<void> {
+    try {
+      const data = await this.readStore();
+      const chat: StoredChat = {
+        sessionId,
+        agentId,
+        notePath: notePath || '',
+        history,
+        createdAt: '',
+        updatedAt: new Date().toISOString(),
+      };
+      const idx = data.chats.findIndex(c => c.sessionId === sessionId && c.agentId === agentId && c.notePath === (notePath || ''));
+      if (idx >= 0) {
+        chat.createdAt = data.chats[idx].createdAt;
+        data.chats[idx] = chat;
+      } else {
+        chat.createdAt = new Date().toISOString();
+        data.chats.push(chat);
       }
+      await this.writeStore(data);
+      console.log('[ChatStorage] saved:', agentId, notePath, sessionId, history.length, 'msgs');
+    } catch (err) {
+      console.error('[ChatStorage] save error:', err);
     }
-    return {
-      agentId: m['agent_id'] || '',
-      notePath: m['note_path'] || '',
-      messageCount: parseInt(m['message_count'] || '0', 10) || 0,
-      createdAt: m['created_at'] || '',
-      updatedAt: m['updated_at'] || '',
-    };
   }
 
-  private parseBody(text: string): ChatMessage[] {
-    const bodyMatch = text.match(/^---\n[\s\S]*?\n---\n\n([\s\S]*)$/);
-    const body = bodyMatch ? bodyMatch[1] : text;
-    const messages: ChatMessage[] = [];
-    const blocks = body.split(/\n(?=## (?:User|Assistant|System))/);
-    for (const block of blocks) {
-      const header = block.match(/^## (User|Assistant|System)/);
-      if (!header) continue;
-      const role = header[1].toLowerCase() as ChatMessage['role'];
-      const content = block.slice(header[0].length).trim();
-      if (content) messages.push({ role, content });
+  /** Carga UNA sesión específica */
+  async load(agentId: string, notePath: string, sessionId: string): Promise<ChatMessage[]> {
+    try {
+      const data = await this.readStore();
+      const found = data.chats.find(c => c.sessionId === sessionId && c.agentId === agentId && c.notePath === (notePath || ''));
+      return found?.history || [];
+    } catch {
+      return [];
     }
-    return messages;
   }
 
-  private countMessages(text: string): number {
-    return (text.match(/^## (?:User|Assistant)/gm) || []).length;
+  /** Encuentra la sesión más reciente para un agente+nota */
+  async findLatestSession(agentId: string, notePath: string): Promise<{ sessionId: string; history: ChatMessage[] } | null> {
+    try {
+      const data = await this.readStore();
+      const sessions = data.chats
+        .filter(c => c.agentId === agentId && c.notePath === (notePath || ''))
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      if (sessions.length === 0) return null;
+      return { sessionId: sessions[0].sessionId, history: sessions[0].history };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Lista todas las sesiones */
+  async list(): Promise<ChatSummary[]> {
+    try {
+      const data = await this.readStore();
+      return data.chats
+        .map(c => ({
+          id: c.sessionId,
+          sessionId: c.sessionId,
+          agentId: c.agentId,
+          notePath: c.notePath || '',
+          messageCount: c.history?.length || 0,
+          createdAt: c.createdAt || '',
+          updatedAt: c.updatedAt || '',
+        }))
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    } catch {
+      return [];
+    }
+  }
+
+  /** Elimina una sesión específica */
+  async delete(agentId: string, notePath: string, sessionId: string): Promise<void> {
+    try {
+      const data = await this.readStore();
+      data.chats = data.chats.filter(c => !(c.sessionId === sessionId && c.agentId === agentId && c.notePath === (notePath || '')));
+      await this.writeStore(data);
+    } catch (err) {
+      console.error('[ChatStorage] delete error:', err);
+    }
+  }
+
+  private async readStore(): Promise<StoreData> {
+    const adapter = this.app.vault.adapter;
+    if (!adapter) return { chats: [] };
+    try {
+      const exists = await adapter.exists(CHATS_FILE);
+      if (!exists) return { chats: [] };
+      const raw = await adapter.read(CHATS_FILE);
+      const parsed = JSON.parse(raw);
+      // Migrar formato viejo (objeto) a nuevo (array)
+      if (parsed.chats && !Array.isArray(parsed.chats)) {
+        const arr: StoredChat[] = Object.values(parsed.chats);
+        const migrated: StoreData = { chats: arr };
+        await adapter.write(CHATS_FILE, JSON.stringify(migrated, null, 1));
+        return migrated;
+      }
+      return parsed as StoreData;
+    } catch {
+      return { chats: [] };
+    }
+  }
+
+  private async writeStore(data: StoreData): Promise<void> {
+    const adapter = this.app.vault.adapter;
+    if (adapter) {
+      await adapter.write(CHATS_FILE, JSON.stringify(data, null, 1));
+    }
   }
 }

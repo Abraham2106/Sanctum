@@ -4,41 +4,49 @@ import { PromptBuilder } from "./PromptBuilder.js";
 import { callModel } from "./callModel.js";
 import { ExecutorRegistry } from "./executors/ActionExecutor.js";
 import { AgentInvocation, ContextFragment } from "./types.js";
+import { Logger } from "./Logger.js";
 
 export interface AgentRunnerOptions {
   agentPath: string;
   vaultPath: string;
   noContext?: boolean;
+  dryRun?: boolean;
   parameters?: Record<string, any>;
 }
 
 export class AgentRunner {
   public async run(options: AgentRunnerOptions): Promise<import("./types.js").AgentAction[]> {
-    // 1. Cargar configuración estática (AgentDefinition es idéntico a AgentConfig)
-    console.log("[Paso 1/5] Cargando configuración...");
-    const definition = await loadAgentConfig(options.agentPath);
-    console.log(`Configuración de '${definition.name}' cargada con éxito.\n`);
+    const logger = new Logger(
+      options.vaultPath,
+      "unknown",
+      "unknown",
+      "unknown"
+    );
 
-    // 2. Recolectar contexto
-    console.log("[Paso 2/5] Recolectando contexto...");
+    const definition = await loadAgentConfig(options.agentPath);
+    logger.agentName = definition.name;
+    logger.agentId = definition.name.toLowerCase().replace(/\s+/g, "-");
+    logger.model = definition.model;
+
+    await logger.log("config", `Configuración de '${definition.name}' cargada`);
+
     let contextFragments: ContextFragment[] = [];
     let contextString = "";
 
     if (options.noContext) {
-      console.log("Contexto desactivado — se omite la recolección de notas.\n");
+      await logger.log("context", "Contexto desactivado — se omite recolección");
     } else {
       const contextResult = await collectContext(definition, options.vaultPath, options.parameters);
       contextFragments = contextResult.fragments;
       contextString = contextResult.contextString;
-      console.log(`Se recolectaron ${contextFragments.length} notas del vault.`);
+      await logger.log("context", `Se recolectaron ${contextFragments.length} notas del vault`, {
+        count: contextFragments.length,
+      });
       if (contextFragments.length === 0) {
-        console.warn("ADVERTENCIA: No se encontró ningún contexto elegible para este agente.");
+        await logger.log("context", "ADVERTENCIA: No se encontró contexto elegible");
       }
-      console.log();
     }
 
-    // 3. Crear invocación estructurada y Prompt
-    console.log("[Paso 3/5] Construyendo prompt...");
     const invocation: AgentInvocation = {
       definition,
       vaultPath: options.vaultPath,
@@ -49,30 +57,42 @@ export class AgentRunner {
     };
 
     const { systemPrompt, userMessage } = PromptBuilder.build(invocation);
-    console.log("Prompt del sistema y mensaje del usuario preparados.\n");
+    await logger.log("prompt", "Prompt construido", {
+      systemLength: systemPrompt.length,
+      userLength: userMessage.length,
+    });
 
-    // 4. Invocación al modelo (Exactamente una sola llamada)
-    console.log("[Paso 4/5] Invocando al modelo de lenguaje...");
     const response = await callModel(definition.model, systemPrompt, userMessage);
+    await logger.logTokens(response.usage?.totalTokens ?? 0);
+    await logger.log("model", "Modelo respondió", {
+      reasoning: response.reasoning,
+      actionCount: response.actions.length,
+      tokensUsed: response.usage?.totalTokens,
+    });
 
-    console.log("\n--- Razonamiento del Agente ---");
-    console.log(`1. Leer y Entender: ${response.reasoning.step1_read}`);
-    console.log(`2. Identificar:     ${response.reasoning.step2_identify}`);
-    console.log(`3. Decidir:         ${response.reasoning.step3_decide}`);
-    console.log(`4. Ejecutar:        ${response.reasoning.step4_execute}`);
-    console.log("-------------------------------\n");
+    const activeActions = response.actions.filter((a) => a.type !== "none");
+    const limit = definition.max_actions ?? activeActions.length;
+    const actionsToExecute = activeActions.slice(0, limit);
 
-    console.log("Acciones propuestas:");
-    console.log(JSON.stringify(response.actions, null, 2));
-    console.log();
+    if (options.dryRun) {
+      await logger.log("dry-run", "DRY RUN — acciones NO ejecutadas", {
+        proposedActions: response.actions,
+        wouldExecute: actionsToExecute.map((a) => ({ type: a.type, ...("title" in a ? { title: a.title } : {}) })),
+      });
+      await logger.finalize(true, 0, true);
+      return response.actions;
+    }
 
-    // 5. Despachar acciones al registry
-    console.log("[Paso 5/5] Ejecutando acciones propuestas...");
     const registry = new ExecutorRegistry();
     await registry.executeAll(response.actions, {
       vaultPath: options.vaultPath,
-      definition
+      definition,
     });
+
+    await logger.log("execute", `${actionsToExecute.length} acciones ejecutadas`, {
+      executedCount: actionsToExecute.length,
+    });
+    await logger.finalize(true, actionsToExecute.length);
 
     return response.actions;
   }
