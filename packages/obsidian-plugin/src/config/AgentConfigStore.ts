@@ -12,7 +12,8 @@ export class AgentConfigStore {
     console.log('[Store] total .md en vault:', all.length, all.map(f => f.path));
     const agentFiles = all.filter(f =>
       f.path.startsWith(AGENTS_DIR + '/') &&
-      !f.path.startsWith(AGENTS_DIR + '/_logs/')
+      !f.path.startsWith(AGENTS_DIR + '/_logs/') &&
+      !f.path.startsWith(AGENTS_DIR + '/_chats/')
     );
     console.log('[Store] archivos en Agents/:', agentFiles.length, agentFiles.map(f => f.path));
 
