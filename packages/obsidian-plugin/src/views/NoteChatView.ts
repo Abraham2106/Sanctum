@@ -5,15 +5,24 @@ import { ChatStorage } from '../chat/ChatStorage';
 
 export const VIEW_TYPE_CHAT = 'sanctum-note-chat';
 
+function makeSessionId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+}
+
 export class NoteChatView extends ItemView {
   private plugin: SanctumAgentsPlugin;
   private currentAgentId = '';
+  private currentSessionId = makeSessionId();
   private sessions = new Map<string, { history: ChatMessage[] }>();
   private chatStorage: ChatStorage;
   private lastPath = '';
   private currentNotePath = '';
 
-  private agentSelect!: HTMLSelectElement;
+  private agentSelectContainer!: HTMLElement;
+  private agentSelectTrigger!: HTMLElement;
+  private agentSelectMenu!: HTMLElement;
+  private agentNames = new Map<string, string>();
+  private agentIds: string[] = [];
   private statusEl!: HTMLElement;
   private messagesEl!: HTMLElement;
   private inputEl!: HTMLInputElement;
@@ -47,67 +56,95 @@ export class NoteChatView extends ItemView {
     this.containerEl.empty();
   }
 
-  /** Carga una sesión de chat desde disco (llamado por ChatHistoryView) */
-  async loadChatFromFiles(agentId: string, notePath: string) {
+  async loadChatSession(agentId: string, notePath: string, sessionId: string) {
     this.currentAgentId = agentId;
     this.currentNotePath = notePath;
-    if (this.agentSelect) {
-      this.agentSelect.value = agentId;
-    }
-    this.lastPath = '';       // fuerza re-sync
-    const history = await this.chatStorage.load(agentId, notePath);
-    const key = this.sessionKeyRaw(agentId, notePath);
+    this.currentSessionId = sessionId;
+    this.setAgentValue(agentId);
+    this.lastPath = '';
+    const history = await this.chatStorage.load(agentId, notePath, sessionId);
+    const key = this.sessionKey();
     this.sessions.set(key, { history });
     this.renderMessages();
     this.statusEl.textContent = notePath || 'Chat global';
-    console.log('[Chat] loaded from disk:', agentId, notePath, history.length, 'messages');
+    console.log('[Chat] loaded session:', sessionId, history.length, 'msgs');
   }
 
-  // ─── Construcción del DOM ──────────────────────────
+  async newSession() {
+    this.currentSessionId = makeSessionId();
+    const key = this.sessionKey();
+    this.sessions.set(key, { history: [] });
+    this.renderMessages();
+    console.log('[Chat] new session:', this.currentSessionId);
+  }
 
   private buildUI() {
     const el = this.containerEl;
     el.empty();
-    el.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;font-family:sans-serif;';
+    el.addClass('sanctum-chat-view');
 
     const topBar = el.createEl('div');
-    topBar.style.cssText = 'display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid #eee;';
+    topBar.addClass('sanctum-chat-header');
 
-    this.agentSelect = topBar.createEl('select');
-    this.agentSelect.style.cssText = 'flex:1;padding:6px;font-size:13px;background:#f5f5f5;color:#000;border:1px solid #ccc;border-radius:4px;min-height:32px;cursor:pointer;';
-    this.agentSelect.onchange = async () => {
-      this.currentAgentId = this.agentSelect.value;
-      await this.loadCurrentChat();
+    this.agentSelectContainer = topBar.createEl('div', { cls: 'sanctum-chat-agent-select' });
+
+    this.agentSelectTrigger = this.agentSelectContainer.createEl('div', { cls: 'sanctum-chat-agent-select-trigger' });
+    this.agentSelectTrigger.textContent = '—';
+
+    this.agentSelectMenu = this.agentSelectContainer.createEl('div', { cls: 'sanctum-chat-agent-select-menu' });
+
+    this.agentSelectTrigger.onclick = (e) => {
+      e.stopPropagation();
+      this.agentSelectContainer.toggleClass('is-open', !this.agentSelectContainer.hasClass('is-open'));
     };
 
+    this.agentSelectMenu.onclick = (e) => {
+      const target = e.target as HTMLElement;
+      const item = target.closest('.sanctum-chat-agent-select-item') as HTMLElement | null;
+      if (!item || !item.dataset.value) return;
+      this.selectAgent(item.dataset.value);
+    };
+
+    this.registerDomEvent(document, 'click', (e) => {
+      if (!this.agentSelectContainer.contains(e.target as Node)) {
+        this.agentSelectContainer.removeClass('is-open');
+      }
+    });
+
+    this.registerDomEvent(document, 'keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.agentSelectContainer.removeClass('is-open');
+      }
+    });
+
+    const newBtn = topBar.createEl('button', { text: '✚' });
+    newBtn.addClass('sanctum-btn');
+    newBtn.title = 'New Chat';
+    newBtn.onclick = () => this.newSession();
+
     const historyBtn = topBar.createEl('button', { text: '📜' });
-    historyBtn.style.cssText = 'padding:4px 8px;font-size:14px;background:#f5f5f5;color:#000;border:1px solid #ccc;border-radius:4px;cursor:pointer;';
+    historyBtn.addClass('sanctum-btn');
     historyBtn.title = 'Chat History';
     historyBtn.onclick = () => this.plugin.activateView('sanctum-chat-history');
 
     this.statusEl = el.createEl('div');
-    this.statusEl.style.cssText = 'font-size:11px;color:#666;padding:2px 8px 4px;';
+    this.statusEl.addClass('sanctum-chat-status');
 
     this.messagesEl = el.createEl('div');
-    this.messagesEl.style.cssText = 'flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:0;';
+    this.messagesEl.addClass('sanctum-chat-messages');
 
     const inputBar = el.createEl('div');
-    inputBar.style.cssText = 'display:flex;gap:6px;padding:6px 8px;border-top:1px solid #eee;';
+    inputBar.addClass('sanctum-chat-input-bar');
 
     this.inputEl = inputBar.createEl('input', { type: 'text', placeholder: 'Escribe @agente tu mensaje...' });
-    this.inputEl.style.cssText = 'flex:1;padding:8px;font-size:14px;border:1px solid #ccc;border-radius:4px;';
     this.inputEl.onkeydown = (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); }
     };
 
     const sendBtn = inputBar.createEl('button', { text: 'Send' });
-    sendBtn.style.cssText = 'padding:8px 16px;font-size:14px;background:#0066cc;color:#fff;border:none;border-radius:4px;cursor:pointer;';
+    sendBtn.addClass('sanctum-btn', 'sanctum-btn-primary');
     sendBtn.onclick = () => this.sendMessage();
-
-    console.log('[Chat] UI construida');
   }
-
-  // ─── Sincronización con nota activa ────────────────
 
   private async sync() {
     const file = this.app.workspace.getActiveFile();
@@ -129,60 +166,87 @@ export class NoteChatView extends ItemView {
       const matches = [...content.matchAll(/@([\w-]+)/g)];
       if (matches.length > 0) {
         const lastMention = matches[matches.length - 1][1];
-        console.log('[Chat] @detectado en nota:', lastMention);
         const allAgents = await this.plugin.store.list();
         const found = allAgents.find(a => a.id === lastMention || a.name.toLowerCase() === lastMention.toLowerCase());
         if (found) {
-          this.agentSelect.value = found.id;
+          this.setAgentValue(found.id);
           this.currentAgentId = found.id;
-          console.log('[Chat] agente auto-seleccionado por @:', found.id);
         }
       }
-    } catch (err) {
-      console.warn('[Chat] error @detect:', err);
-    }
+    } catch (err) { /* ignore */ }
 
     await this.loadCurrentChat();
   }
 
   private async loadCurrentChat() {
     if (!this.currentAgentId || !this.currentNotePath) return;
-    const history = await this.chatStorage.load(this.currentAgentId, this.currentNotePath);
-    const key = this.sessionKey();
-    this.sessions.set(key, { history });
+    const latest = await this.chatStorage.findLatestSession(this.currentAgentId, this.currentNotePath);
+    if (latest) {
+      this.currentSessionId = latest.sessionId;
+      const key = this.sessionKey();
+      this.sessions.set(key, { history: latest.history });
+    } else {
+      this.currentSessionId = makeSessionId();
+      const key = this.sessionKey();
+      this.sessions.set(key, { history: [] });
+    }
     this.renderMessages();
-    console.log('[Chat] loaded chat:', this.currentAgentId, 
-      this.currentNotePath, history.length, 'messages');
   }
 
-  // ─── Agentes dropdown ──────────────────────────────
-
   private async loadAgentList() {
-    console.log('[Chat] loadAgentList');
     const agents = await this.plugin.store.list();
-    const prevValue = this.agentSelect.value || this.currentAgentId;
-    this.agentSelect.empty();
+    const prevValue = this.currentAgentId;
+    this.agentSelectMenu.empty();
+    this.agentNames.clear();
+    this.agentIds = [];
+
     if (agents.length === 0) {
-      const opt = this.agentSelect.createEl('option');
-      opt.value = ''; opt.text = '-- Sin agentes --'; opt.selected = true;
+      this.agentSelectTrigger.textContent = '-- Sin agentes --';
       this.currentAgentId = '';
       return;
     }
+
     for (const a of agents) {
-      const opt = this.agentSelect.createEl('option', { value: a.id, text: `${a.name} (${a.tools.join(',')})` });
-      if (a.id === prevValue) opt.selected = true;
+      const label = `${a.name} (${a.tools.join(',')})`;
+      this.agentNames.set(a.id, label);
+      this.agentIds.push(a.id);
+
+      const item = this.agentSelectMenu.createEl('div', { cls: 'sanctum-chat-agent-select-item' });
+      item.textContent = label;
+      item.dataset.value = a.id;
     }
-    this.currentAgentId = this.agentSelect.value || agents[0]?.id || '';
+
+    const target = prevValue && agents.some(a => a.id === prevValue) ? prevValue : agents[0].id;
+    this.selectAgent(target);
   }
 
-  // ─── Sesiones y mensajes ───────────────────────────
+  private selectAgent(id: string) {
+    if (id === this.currentAgentId && this.currentAgentId !== '') {
+      this.agentSelectContainer.removeClass('is-open');
+      return;
+    }
 
-  private sessionKeyRaw(agentId: string, notePath: string): string {
-    return `${notePath || '?'}::${agentId}`;
+    this.currentAgentId = id;
+    this.setAgentValue(id);
+    this.agentSelectContainer.removeClass('is-open');
+
+    this.currentSessionId = makeSessionId();
+    this.loadCurrentChat();
+  }
+
+  private setAgentValue(id: string) {
+    this.agentSelectTrigger.textContent = this.agentNames.get(id) || id;
+    const items = this.agentSelectMenu.querySelectorAll('.sanctum-chat-agent-select-item');
+    items.forEach(el => {
+      el.removeClass('is-selected');
+      if ((el as HTMLElement).dataset.value === id) {
+        el.addClass('is-selected');
+      }
+    });
   }
 
   private sessionKey(): string {
-    return this.sessionKeyRaw(this.currentAgentId, (this.currentNotePath || this.app.workspace.getActiveFile()?.path) ?? '');
+    return `${this.currentNotePath || '?'}::${this.currentAgentId}::${this.currentSessionId}`;
   }
 
   private getSession() {
@@ -198,10 +262,10 @@ export class NoteChatView extends ItemView {
     const session = this.getSession();
     for (const msg of session.history) {
       const bubble = this.messagesEl.createEl('div');
-      bubble.style.cssText = msg.role === 'user'
-        ? 'align-self:flex-end;background:#0066cc;color:#fff;padding:6px 10px;border-radius:8px;font-size:13px;max-width:90%;white-space:pre-wrap;'
-        : 'align-self:flex-start;background:#eee;color:#000;padding:6px 10px;border-radius:8px;font-size:13px;max-width:90%;white-space:pre-wrap;';
-      bubble.textContent = msg.content;
+      bubble.addClass('sanctum-chat-bubble', msg.role);
+      const text = bubble.createEl('span');
+      text.addClass('sanctum-chat-text');
+      text.textContent = msg.content;
     }
     this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
   }
@@ -217,17 +281,6 @@ export class NoteChatView extends ItemView {
     this.renderMessages();
   }
 
-  private async saveToDisk() {
-    const notePath = this.currentNotePath || this.app.workspace.getActiveFile()?.path ?? '';
-    const session = this.sessions.get(this.sessionKey());
-    if (session) {
-      await this.chatStorage.save(this.currentAgentId, notePath, session.history);
-      console.log('[Chat] saved to disk');
-    }
-  }
-
-  // ─── Envío de mensajes ─────────────────────────────
-
   private async sendMessage() {
     let text = this.inputEl.value.trim();
     if (!text) return;
@@ -239,16 +292,17 @@ export class NoteChatView extends ItemView {
       const all = await this.plugin.store.list();
       const found = all.find(a => a.id === name || a.name.toLowerCase() === name);
       if (found) {
-        this.agentSelect.value = found.id;
+        this.setAgentValue(found.id);
         this.currentAgentId = found.id;
+        this.currentSessionId = makeSessionId();
       } else {
-        this.addMessage('assistant', `No existe un agente con id "@${mentionRx[1]}".`);
+        this.addMessage('assistant', `No existe "@${mentionRx[1]}".`);
         return;
       }
     }
 
     if (!this.currentAgentId) {
-      this.addMessage('assistant', 'Seleccioná un agente del dropdown o escribí @agente en el mensaje.');
+      this.addMessage('assistant', 'Seleccioná un agente del dropdown o escribí @agente.');
       return;
     }
 
@@ -258,7 +312,7 @@ export class NoteChatView extends ItemView {
     this.addMessage('user', text);
     this.inputEl.value = '';
     this.addMessage('assistant', '⏳ Pensando...');
-    const notePath = this.currentNotePath || this.app.workspace.getActiveFile()?.path ?? '';
+    const notePath = this.currentNotePath || (this.app.workspace.getActiveFile()?.path ?? '');
 
     try {
       const agent = await this.plugin.store.get(this.currentAgentId);
@@ -267,11 +321,14 @@ export class NoteChatView extends ItemView {
         this.inputEl.disabled = false;
         return;
       }
-
       const session = this.getSession();
       const response = await this.plugin.runner.runChat(agent, session.history.slice(0, -1), text);
       this.replaceLast(response || '(respuesta vacía)');
-      await this.chatStorage.save(this.currentAgentId, notePath, session.history);
+      try {
+        await this.chatStorage.save(this.currentAgentId, notePath, this.currentSessionId, session.history);
+      } catch (saveErr) {
+        console.error('[Chat] save error:', saveErr);
+      }
     } catch (err) {
       this.replaceLast(`Error: ${err}`);
       console.error('[Chat] error:', err);
