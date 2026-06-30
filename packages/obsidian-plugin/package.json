@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "deploy": "npm run build && node -e \"require('fs').cpSync('main.js','../../vault/.obsidian/plugins/sanctum-agents/main.js');require('fs').cpSync('styles.css','../../vault/.obsidian/plugins/sanctum-agents/styles.css');console.log('Deployed to .obsidian/plugins/');\""
+    "deploy": "npm run build && node -e \"require('fs').cpSync('main.js','C:/Users/solan/Documents/Personal/Desarrollo_y_Proyectos/vaults/Sanctum/.obsidian/plugins/sanctum-agents/main.js');require('fs').cpSync('styles.css','C:/Users/solan/Documents/Personal/Desarrollo_y_Proyectos/vaults/Sanctum/.obsidian/plugins/sanctum-agents/styles.css');console.log('Deployed to real vault');\""
   },
   "keywords": ["obsidian", "plugin", "sanctum", "agents"],
   "author": "Sanctum",
