@@ -8,6 +8,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "deploy": "cd packages/obsidian-plugin && npm run deploy",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint packages/ --ext .ts",
