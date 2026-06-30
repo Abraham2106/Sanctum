@@ -1,35 +1,92 @@
+import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
+import { AddressInfo } from "net";
 import * as dotenv from "dotenv";
 import { AgentRunner } from "./AgentRunner.js";
 import { AgentWorkflow } from "./workflow.js";
+import { createAgentServer } from "./server.js";
 
-// Configurar dotenv apuntando al .env en la raíz del monorepo
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+function findEnvPath(startDir: string): string | undefined {
+  let dir = path.resolve(startDir);
+  while (true) {
+    const candidate = path.join(dir, ".env");
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
+  }
+  return undefined;
+}
+
+function findMonorepoRoot(startDir: string): string {
+  let dir = path.resolve(startDir);
+  while (true) {
+    const packageJson = path.join(dir, "package.json");
+    if (fs.existsSync(packageJson)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(packageJson, "utf-8")) as { workspaces?: string[] };
+        if (Array.isArray(pkg.workspaces) && pkg.workspaces.length > 0) {
+          return dir;
+        }
+      } catch {
+        // ignorar JSON corrupto
+      }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
+  }
+  return process.cwd();
+}
+
+// Configurar dotenv apuntando al .env más cercano en ancestros
+const envPath = findEnvPath(process.cwd());
+if (envPath) {
+  dotenv.config({ path: envPath });
+}
 
 async function main() {
   const args = process.argv.slice(2);
+  const serverFlag = args.includes("--server");
   const agentIndex = args.indexOf("--agent");
   const workflowIndex = args.indexOf("--workflow");
   const noContext  = args.includes("--no-context");
-  
+
+  const rootDir = findMonorepoRoot(process.cwd());
+  const vaultPath = process.env.VAULT_PATH
+    ? path.resolve(rootDir, process.env.VAULT_PATH)
+    : path.resolve(rootDir, "vault");
+
+  if (serverFlag) {
+    const portIndex = args.indexOf("--port");
+    const port = portIndex !== -1 ? parseInt(args[portIndex + 1], 10) : parseInt(process.env.UI_PORT ?? "3456", 10);
+    const server = createAgentServer({ vaultPath, port });
+    server.on("listening", () => {
+      const addr = server.address() as AddressInfo;
+      console.log(`Sanctum server on http://localhost:${addr.port} | vault: ${vaultPath}`);
+    });
+    return;
+  }
+
   if (agentIndex === -1 && workflowIndex === -1) {
-    console.error("ERROR: Debes proporcionar la ruta a la nota del agente o invocar un workflow. Ejemplo:");
+    console.error("ERROR: Debes proporcionar la ruta a la nota del agente, invocar un workflow, o usar --server. Ejemplo:");
     console.error("  npx tsx src/index.ts --agent ../../vault/Agents/github-manager.md");
     console.error("  npx tsx src/index.ts --workflow \"Crea un proyecto X\"");
+    console.error("  npx tsx src/index.ts --server");
     process.exit(1);
   }
 
-  const rootDir = path.resolve(__dirname, "../../../");
   const agentPath = agentIndex !== -1 ? path.resolve(args[agentIndex + 1]) : "";
-  const vaultPath = process.env.VAULT_PATH 
-    ? path.resolve(rootDir, process.env.VAULT_PATH) 
-    : path.resolve(rootDir, "vault");
 
   // Parsea parámetros CLI adicionales opcionales (por ejemplo --channel_id XXX o --triggered_by YYY)
   const parameters: Record<string, any> = {};
-  
+
   const channelIndex = args.indexOf("--channel_id");
   if (channelIndex !== -1 && args[channelIndex + 1]) {
     parameters.channel_id = args[channelIndex + 1];
