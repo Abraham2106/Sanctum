@@ -50,8 +50,17 @@ export function migrate(db: Database.Database): void {
       FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS embeddings (
+      doc_id    INTEGER PRIMARY KEY,
+      model     TEXT NOT NULL DEFAULT 'text-embedding-004',
+      vector    BLOB NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_documents_folder ON documents(folder);
     CREATE INDEX IF NOT EXISTS idx_term_index_term ON term_index(term);
+    CREATE INDEX IF NOT EXISTS idx_embeddings_model ON embeddings(model);
   `);
 }
 

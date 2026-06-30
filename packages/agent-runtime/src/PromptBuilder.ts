@@ -123,6 +123,13 @@ REGLAS CRÍTICAS DE SALVAGUARDA:
         ?.find((c) => c.id === originChannelId)?.name ??
       "desconocido";
 
+    // Listar parámetros personalizados (excluyendo los standard)
+    const knownParams = ["channel_id", "channel_name", "server_channels", "triggered_by"];
+    const customParams = Object.entries(invocation.parameters)
+      .filter(([key]) => !knownParams.includes(key) && invocation.parameters[key] !== undefined)
+      .map(([key, value]) => `  ${key}: ${value}`)
+      .join("\n");
+
     let agentPrompt = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TUS INSTRUCCIONES ESPECÍFICAS (máxima prioridad):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -136,6 +143,7 @@ PARÁMETROS DE LA INVOCACIÓN EN TIEMPO DE EJECUCIÓN:
     ID:     ${originChannelId || "No provisto"}
 
 - Invocado por (usuario solicitante): ${invocation.parameters.triggered_by ?? "Obsidian-Plugin/CLI"}
+${customParams ? `\nParámetros adicionales:\n${customParams}` : ""}
 `;
 
     const userMessage = `━━━ CONTEXTO DEL VAULT (${invocation.contextString ? "disponible" : "vacío"}) ━━━

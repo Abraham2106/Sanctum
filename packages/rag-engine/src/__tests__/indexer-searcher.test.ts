@@ -3,7 +3,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
 import { indexFolder, indexFile } from "../indexer.js";
-import { searchAndCollect, search } from "../searcher.js";
+import { searchAndCollect, search, hybridSearch, searchAndCollectHybrid } from "../searcher.js";
 
 const testDir = path.join(os.tmpdir(), `sanctum-rag-test-${Date.now()}`);
 
@@ -93,5 +93,28 @@ Calcula los gradientes mediante la regla de la cadena del c\u00E1lculo diferenci
   it("filters by folder", async () => {
     const results = search(testDir, "redes", 5, "Research");
     expect(results.length).toBeGreaterThan(0);
+  });
+
+  it("hybridSearch falls back to FTS5 when no embeddings", async () => {
+    const results = await hybridSearch(testDir, "backpropagation", 5);
+    expect(results.length).toBeGreaterThanOrEqual(1);
+    expect(results[0].ftsScore).toBeDefined();
+    expect(results[0].semanticScore).toBeDefined();
+    expect(results[0].combinedScore).toBeDefined();
+  });
+
+  it("hybridSearch with alpha=1 equals pure FTS5", async () => {
+    const fts5 = search(testDir, "redes", 5);
+    const hybrid = await hybridSearch(testDir, "redes", 5, undefined, 1);
+
+    expect(hybrid.length).toBeGreaterThanOrEqual(1);
+    expect(fts5[0].path).toBe(hybrid[0].path);
+  });
+
+  it("searchAndCollectHybrid returns formatted string", async () => {
+    const result = await searchAndCollectHybrid(testDir, "CNN", 3);
+    expect(result).toContain("CNN");
+    expect(result).toContain("fts:");
+    expect(result).toContain("sem:");
   });
 });

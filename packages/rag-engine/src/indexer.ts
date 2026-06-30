@@ -3,6 +3,7 @@ import * as path from "node:path";
 import type Database from "better-sqlite3";
 import { openDatabase, migrate } from "./database.js";
 import { tokenize, computeFrequencies } from "./tokenizer.js";
+import { embedText, serializeVector, isEmbeddingAvailable } from "./embedder.js";
 
 export interface IndexableFile {
   vaultPath: string;
@@ -13,6 +14,7 @@ export interface IndexableFile {
 export interface IndexStats {
   documentsIndexed: number;
   termsIndexed: number;
+  embeddingsGenerated: number;
   elapsedMs: number;
 }
 
@@ -118,6 +120,11 @@ export async function indexFile(
       VALUES (?, ?, ?)
     `);
 
+    const upsertEmbedding = db.prepare(`
+      INSERT OR REPLACE INTO embeddings (doc_id, model, vector, created_at)
+      VALUES (?, ?, ?, datetime('now'))
+    `);
+
     const transaction = db.transaction(() => {
       const result = upsert.run(
         relativePath,
@@ -144,6 +151,22 @@ export async function indexFile(
     });
 
     transaction();
+
+    if (isEmbeddingAvailable()) {
+      try {
+        const result = await embedText(title + "\n\n" + content);
+        if (result) {
+          const existing = db
+            .prepare("SELECT id FROM documents WHERE path = ?")
+            .get(relativePath) as { id: number } | undefined;
+          if (existing) {
+            upsertEmbedding.run(existing.id, result.model, serializeVector(result.vector));
+          }
+        }
+      } catch {
+        // Embedding falló, se continúa con FTS5 puro
+      }
+    }
   } finally {
     db.close();
   }
@@ -179,6 +202,11 @@ export async function indexFolder(
       VALUES (?, ?, ?)
     `);
 
+    const upsertEmbedding = db.prepare(`
+      INSERT OR REPLACE INTO embeddings (doc_id, model, vector, created_at)
+      VALUES (?, ?, ?, datetime('now'))
+    `);
+
     const transaction = db.transaction(() => {
       for (const file of files) {
         const tokens = tokenize(file.content);
@@ -209,9 +237,38 @@ export async function indexFolder(
 
     transaction();
 
+    let embeddingsGenerated = 0;
+
+    if (isEmbeddingAvailable()) {
+      console.log(`Generando embeddings para ${files.length} documentos...`);
+
+      for (const file of files) {
+        try {
+          const title = extractTitle(file.content);
+          const result = await embedText(title + "\n\n" + file.content);
+          if (result) {
+            const row = db
+              .prepare("SELECT id FROM documents WHERE path = ?")
+              .get(file.relativePath) as { id: number } | undefined;
+            if (row) {
+              upsertEmbedding.run(row.id, result.model, serializeVector(result.vector));
+              embeddingsGenerated++;
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (embeddingsGenerated > 0) {
+        console.log(`${embeddingsGenerated}/${files.length} documentos embebidos`);
+      }
+    }
+
     return {
       documentsIndexed: files.length,
       termsIndexed: totalTerms,
+      embeddingsGenerated,
       elapsedMs: Date.now() - start,
     };
   } finally {

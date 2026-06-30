@@ -1,10 +1,10 @@
 import { loadAgentConfig } from "./loadAgentConfig.js";
 import { collectContext } from "./collectContext.js";
 import * as path from "path";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const vaultPath = path.resolve(__dirname, "../../../vault");
+const vaultPath = process.env.VAULT_PATH
+  ? path.resolve(process.env.VAULT_PATH)
+  : path.resolve(process.cwd(), "../../vault");
 const agentArg = process.argv[2] || "Agents/github-manager.md";
 const agentConfigPath = path.resolve(vaultPath, agentArg);
 

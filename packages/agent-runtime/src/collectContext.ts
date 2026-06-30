@@ -65,10 +65,19 @@ export async function collectContext(
 
   if (hasRag && searchQuery) {
     try {
-      console.log(`Usando RAG search: "${searchQuery}"...`);
-      const { searchAndCollect } = await import("rag-engine");
+      const alpha = parseFloat(parameters?.hybrid_alpha ?? "0.5");
+      console.log(`Usando RAG hybrid search: "${searchQuery}" (alpha=${alpha})...`);
+
+      const { searchAndCollect, searchAndCollectHybrid } = await import("rag-engine");
       const folderFilter = parameters?.search_folder as string | undefined;
-      const contextContent = searchAndCollect(vaultPath, searchQuery, 10, folderFilter);
+
+      let contextContent: string;
+
+      try {
+        contextContent = await searchAndCollectHybrid(vaultPath, searchQuery, 10, folderFilter, alpha);
+      } catch {
+        contextContent = searchAndCollect(vaultPath, searchQuery, 10, folderFilter);
+      }
 
       if (contextContent) {
         fragments.push({
