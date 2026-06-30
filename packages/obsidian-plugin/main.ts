@@ -180,6 +180,55 @@ export default class SanctumAgentsPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'sanctum-create-content-pipeline',
+      name: 'Create Content Pipeline (Forager → Synthesizer → Reflector → Curator)',
+      callback: async () => {
+        const agents: AgentConfig[] = [
+          {
+            id: 'forager', name: 'Forager',
+            instructions: 'Eres el PRIMER AGENTE de un pipeline de contenido. Tu funcion es recolectar materia prima.\n\n## Flujo\n1. El usuario te da un tema o pregunta de investigacion.\n2. Usas rag_search para buscar en el vault informacion relacionada.\n3. Lees los archivos y extraes conceptos clave, citas y referencias.\n4. Creas una carpeta Research/<Tema>/ con un archivo findings.md.\n5. Haces rag_index_folder para indexar los nuevos archivos.\n\n## Output esperado\n- Research/<Tema>/findings.md con resumen ejecutivo, conceptos clave, referencias, preguntas abiertas.',
+            triggers: { run_manual: true, on_new_chat: false, on_mentioned: false },
+            schedule: { enabled: false },
+            chain_next: 'synthesizer',
+            allowed_folders: ['.'], allowed_tags: ['agent-access'],
+            tools: ['vault'], model: 'auto', max_actions: 4,
+          },
+          {
+            id: 'synthesizer', name: 'Synthesizer',
+            instructions: 'Eres el SEGUNDO AGENTE del pipeline. Tomas los hallazgos del Forager y produces documentos pulidos.\n\n## Flujo\n1. Revisa el chain context (prev_actions del Forager) para saber que hallazgos se generaron.\n2. Lee Research/<Tema>/findings.md.\n3. Produce documentos: 01-introduction.md, 02-analysis.md, 03-conclusion.md.\n4. Cada documento con frontmatter, headings, referencias.\n5. Haces rag_index_folder.\n\n## Chain context\nSiempre revisa que hizo el agente anterior.',
+            triggers: { run_manual: true, on_new_chat: false, on_mentioned: false },
+            schedule: { enabled: false },
+            chain_next: 'reflector',
+            allowed_folders: ['Research', 'Agents'], allowed_tags: ['agent-access', 'research'],
+            tools: ['vault'], model: 'auto', max_actions: 5,
+          },
+          {
+            id: 'reflector', name: 'Reflector',
+            instructions: 'Eres el TERCER AGENTE del pipeline. Revisas y mejoras la calidad del contenido.\n\n## Flujo\n1. Revisa el chain context para ver que documentos creo Synthesizer.\n2. Lee los documentos en Research/<Tema>/.\n3. Evalua: integridad, claridad, estructura, referencias.\n4. Si hay problemas, reescribe o corrige. Si no, usa accion none.\n\n## Criterios\n- Frontmatter con tags? Headings jerarquicos? Referencias? Contenido autocontenido? Errores factuales?',
+            triggers: { run_manual: true, on_new_chat: false, on_mentioned: false },
+            schedule: { enabled: false },
+            chain_next: 'curator',
+            allowed_folders: ['Research', 'Agents'], allowed_tags: ['agent-access', 'research'],
+            tools: ['vault'], model: 'auto', max_actions: 3,
+          },
+          {
+            id: 'curator', name: 'Curator',
+            instructions: 'Eres el CUARTO Y ULTIMO AGENTE del pipeline. Catalogas el contenido final.\n\n## Flujo\n1. Revisa el chain context.\n2. Lee todos los documentos en Research/<Tema>/.\n3. Crea Research/<Tema>/README.md con indice, resumen, tags, estado.\n4. Agrega tags consistentes a todos los documentos.\n5. Hace rag_index_folder.\n6. Crea log en Agents/_logs/ con resumen del pipeline.\n\n## Chain context\nEste es el ultimo paso. Todo debe quedar coherente, indexado y documentado.',
+            triggers: { run_manual: true, on_new_chat: false, on_mentioned: false },
+            schedule: { enabled: false },
+            allowed_folders: ['Research', 'Agents'], allowed_tags: ['agent-access'],
+            tools: ['vault'], model: 'auto', max_actions: 3,
+          },
+        ];
+
+        for (const a of agents) {
+          await this.store.save(a);
+        }
+        new Notice('Content pipeline created: Forager → Synthesizer → Reflector → Curator');
+      },
+    });
+
     this.app.workspace.onLayoutReady(async () => {
       try {
         const agentsDir = this.app.vault.getAbstractFileByPath('Agents');
