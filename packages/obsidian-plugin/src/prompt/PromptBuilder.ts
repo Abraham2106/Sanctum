@@ -59,15 +59,20 @@ You can include multiple ACTION blocks. They will be removed from the visible re
 Conversation history will follow.`.trim();
 
 export class PromptBuilder {
-  build(agent: AgentConfig, notes: AgentNote[], userInput?: string): ChatMessage[] {
+  build(agent: AgentConfig, notes: AgentNote[], userInput?: string, chainContext?: string): ChatMessage[] {
     const tools = agent.tools.length > 0 ? agent.tools.join(', ') : 'none';
     const context = notes.map(n => `--- ${n.path} ---\n${n.content}\n---`).join('\n\n');
+
+    let instructions = agent.instructions;
+    if (chainContext) {
+      instructions += `\n\n## Chain context\n${chainContext}\n\nReview and act upon the chain context above. If everything is fine, acknowledge and proceed. If improvements are needed, take corrective action.`;
+    }
 
     const system = SYSTEM_PROMPT
       .replace('{max_actions}', String(agent.max_actions))
       .replace('{tools}', tools)
-      .replace('{instructions}', agent.instructions)
-      .replace('{note_count}', String(notes.length))
+      .replace('{instructions}', instructions)
+      .replace('{note_count}', String(notes.length + (chainContext ? 1 : 0)))
       .replace('{context}', context || '(no context)');
 
     const messages: ChatMessage[] = [
@@ -77,7 +82,7 @@ export class PromptBuilder {
     if (userInput) {
       messages.push({ role: 'user', content: userInput });
     } else {
-      messages.push({ role: 'user', content: 'Run the agent according to its instructions.' });
+      messages.push({ role: 'user', content: chainContext ? 'Review the chain context and take action.' : 'Run the agent according to its instructions.' });
     }
 
     return messages;

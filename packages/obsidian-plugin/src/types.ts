@@ -25,6 +25,7 @@ export interface AgentConfig {
   instructions: string;
   triggers: AgentTriggers;
   schedule?: AgentSchedule;
+  chain_next?: string;
   allowed_folders: string[];
   allowed_tags: string[];
   tools: AgentTool[];

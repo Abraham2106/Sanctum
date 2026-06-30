@@ -136,6 +136,7 @@ export class AgentConfigStore {
           : undefined,
       },
       schedule,
+      chain_next: typeof data.chain_next === 'string' ? data.chain_next : undefined,
       allowed_folders: toStrArray(data.allowed_folders),
       allowed_tags: toStrArray(data.allowed_tags),
       tools: toolsRaw,

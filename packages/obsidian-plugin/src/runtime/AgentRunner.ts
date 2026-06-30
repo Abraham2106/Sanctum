@@ -63,13 +63,13 @@ export class AgentRunner {
     return this.mcp.connected;
   }
 
-  async run(agent: AgentConfig, userInput?: string): Promise<AgentResult> {
-    console.log(`[Sanctum] Running agent: ${agent.name}`);
+  async run(agent: AgentConfig, userInput?: string, chainContext?: string): Promise<AgentResult> {
+    console.log(`[Sanctum] Running agent: ${agent.name}${chainContext ? ' (chain)' : ''}`);
 
     const notes = await this.contextCollector.collect(agent);
     console.log(`[Sanctum] Context: ${notes.length} notes`);
 
-    const messages = this.promptBuilder.build(agent, notes, userInput);
+    const messages = this.promptBuilder.build(agent, notes, userInput, chainContext);
     const result = await this.llmClient.complete(messages, agent.model);
 
     console.log(`[Sanctum] Result (${result.tokens} tokens):`);

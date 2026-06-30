@@ -47,7 +47,11 @@ export class SchedulerManager {
     const timer = setInterval(async () => {
       try {
         console.log(`[SchedulerManager] Running scheduled: ${agent.name}`);
-        await this.plugin.runner.run(agent);
+        if (agent.chain_next) {
+          await this.plugin.workflow.runChain(agent);
+        } else {
+          await this.plugin.runner.run(agent);
+        }
         console.log(`[SchedulerManager] ${agent.name} completed`);
       } catch (err) {
         console.error(`[SchedulerManager] ${agent.name} failed:`, err);

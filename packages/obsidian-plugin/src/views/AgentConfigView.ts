@@ -138,6 +138,14 @@ export class AgentConfigView extends ItemView {
       schedDailyRow.style.display = schedMode.value === 'daily' ? '' : 'none';
     };
 
+    this.addSection(form, 'Chain');
+    const chainRow = form.createEl('div', { cls: 'sanctum-field-row' });
+    chainRow.createEl('label', { text: 'Next Agent:', cls: 'sanctum-field-label' });
+    const chainInput = chainRow.createEl('input', {
+      type: 'text', value: config.chain_next ?? '', placeholder: 'agent-id (e.g. reflector)',
+      cls: 'sanctum-input',
+    });
+
     this.addSection(form, 'Tools & Access');
     const toolTypes: AgentTool[] = ['vault', 'github', 'web', 'discord'];
     const toolToggles: Record<AgentTool, HTMLInputElement> = {} as Record<AgentTool, HTMLInputElement>;
@@ -168,6 +176,7 @@ export class AgentConfigView extends ItemView {
       idInput, nameInput, instrText, runMan, newChat, mentioned, vaultEv,
       veFolders, veTags, veEvent,
       schedOn, schedMode, schedIntervalInput, schedDailyInput,
+      chainInput,
       toolToggles, afInput, atInput, modelInput, maxInput,
     );
   }
@@ -179,6 +188,7 @@ export class AgentConfigView extends ItemView {
     veTags: HTMLInputElement, veEvent: HTMLSelectElement,
     schedOn: HTMLInputElement, schedMode: HTMLSelectElement,
     schedIntervalInput: HTMLInputElement, schedDailyInput: HTMLInputElement,
+    chainInput: HTMLInputElement,
     toolToggles: Record<AgentTool, HTMLInputElement>, afInput: HTMLInputElement,
     atInput: HTMLInputElement, modelInput: HTMLInputElement, maxInput: HTMLInputElement,
   ) {
@@ -206,6 +216,7 @@ export class AgentConfigView extends ItemView {
         on_vault_event: vaultEv.checked ? { folders: split(veFolders.value), tags: split(veTags.value), event: veEvent.value as VaultEventType } : undefined,
       },
       schedule,
+      chain_next: chainInput.value.trim() || undefined,
       allowed_folders: split(afInput.value),
       allowed_tags: split(atInput.value),
       tools: (Object.entries(toolToggles) as [AgentTool, HTMLInputElement][]).filter(([, cb]) => cb.checked).map(([t]) => t),

@@ -46,9 +46,16 @@ export class AgentListView extends ItemView {
       card.createEl('div', { text: `${agent.tools.join(', ')} · ${agent.model}`, cls: 'sanctum-agent-meta' });
 
       const btns = card.createEl('div', { cls: 'sanctum-card-actions' });
-      const runBtn = btns.createEl('button', { text: 'Run' });
-      runBtn.addClass('sanctum-btn', 'sanctum-btn-primary');
-      runBtn.onclick = () => this.runAgent(agent);
+
+      if (agent.chain_next) {
+        const chainBtn = btns.createEl('button', { text: 'Run Chain' });
+        chainBtn.addClass('sanctum-btn', 'sanctum-btn-primary');
+        chainBtn.onclick = () => this.runChain(agent);
+      } else {
+        const runBtn = btns.createEl('button', { text: 'Run' });
+        runBtn.addClass('sanctum-btn', 'sanctum-btn-primary');
+        runBtn.onclick = () => this.runAgent(agent);
+      }
 
       const editBtn = btns.createEl('button', { text: 'Edit' });
       editBtn.addClass('sanctum-btn');
@@ -81,6 +88,17 @@ export class AgentListView extends ItemView {
       new Notice(`Done (${result.tokens}t, ${result.actions.length} actions)`);
     } catch (err) {
       new Notice(`Failed: ${err}`);
+    }
+  }
+
+  private async runChain(agent: AgentConfig) {
+    new Notice(`Running chain from: ${agent.name}...`);
+    try {
+      const steps = await this.plugin.workflow.runChain(agent);
+      const summary = steps.map(s => `${s.agent.name} (${s.result.tokens}t, ${s.result.actions.length}a)`).join(' → ');
+      new Notice(`Chain done: ${summary}`);
+    } catch (err) {
+      new Notice(`Chain failed: ${err}`);
     }
   }
 

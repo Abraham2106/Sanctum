@@ -8,6 +8,7 @@ import { NoteChatView, VIEW_TYPE_CHAT } from './src/views/NoteChatView';
 import { ChatHistoryView, VIEW_TYPE_CHAT_HISTORY } from './src/views/ChatHistoryView';
 import { TriggerManager } from './src/triggers/TriggerManager';
 import { SchedulerManager } from './src/triggers/SchedulerManager';
+import { WorkflowRunner } from './src/runtime/WorkflowRunner';
 import { AgentConfig } from './src/types';
 import { ChatStorage } from './src/chat/ChatStorage';
 
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: SanctumPluginSettings = {
 export default class SanctumAgentsPlugin extends Plugin {
   store!: AgentConfigStore;
   runner!: AgentRunner;
+  workflow!: WorkflowRunner;
   triggers!: TriggerManager;
   scheduler!: SchedulerManager;
   chatStorage!: ChatStorage;
@@ -55,6 +57,7 @@ export default class SanctumAgentsPlugin extends Plugin {
     this.registerView(VIEW_TYPE_CHAT_HISTORY, (leaf) => new ChatHistoryView(leaf, this));
 
     this.triggers = new TriggerManager(this);
+    this.workflow = new WorkflowRunner(this);
     this.scheduler = new SchedulerManager(this);
     this.chatStorage = new ChatStorage(this.app);
 

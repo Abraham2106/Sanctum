@@ -13,6 +13,7 @@ tools:
   - vault
   - discord
 max_actions: 3
+chain_next: reflector
 ---
 
 Convierte la instrucción del usuario en acciones concretas. Usa el contexto del vault para decidir qué issues de GitHub crear/cerrar, qué mensajes enviar a Discord o qué notas escribir en el vault.
